@@ -1,0 +1,81 @@
+<html>
+    <head>
+        <title>
+            POS and Inventory System
+        </title>
+        <link rel="stylesheet" type="text/css" href="css/style.css">
+        <link rel="icon" type="img/png" href="img/logo.png" src="img/logo.png">
+        <script type="module" src="js/login.js" defer></script>
+    </head>
+    <body>
+        <!--Start of Navigation Bar-->
+        <div class = "navbar">
+        <img src="img/logo.png" id="nav-logo">
+        <p id="navtitle">VHT</p>
+        <p id="navtitle2">Naturals</p>
+        </div>
+        <!-- End of Navigation Bar -->
+        <!-- Body of Home Page -->
+
+        <div class="homebody">
+        <h1> Welcome! </h1>
+        <h3> Do you wish to start working?</h3>
+        <a class="login" href="#"> Log in </a>
+        </div>
+        <!-- End of Body of Home Page -->
+        <!-- Log in form -->
+        <div class="container" id="loginPopup">
+            <div class="loginbody">
+            <span class="close-btn" id="closePopup">&times;</span>
+            <form action="html/dashboard.html">
+                <div>
+                <label for="Email">Email</label>
+                <input type="text" id="email" placeholder="Enter your Email"/>
+                </div>
+                <div class="password-field">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your Password"/>
+                <i class="fa-solid fa-eye toggle-password" id="togglePassword"></i>
+                </div>
+                <div>
+                <button type="submit" id="submit">Login</button>
+                </div>
+            </form>
+            </div>
+    </div>
+
+    <script>
+        const loginLink = document.querySelector('.login');
+        const popup = document.getElementById('loginPopup');
+        const closeBtn = document.getElementById('closePopup');
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        loginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            popup.style.display = 'flex';
+        });
+
+        closeBtn.addEventListener('click', () => {
+            popup.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.style.display = 'none';
+            }
+        });
+
+        togglePassword.addEventListener('click', () => {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            togglePassword.classList.toggle('fa-eye');
+            togglePassword.classList.toggle('fa-eye-slash');
+        });
+
+        
+        
+        
+    </script>
+    </body>
+</html>
