@@ -1,0 +1,147 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; 
+  margin: 0;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  
+  background-size: cover;
+  filter: blur(4px); 
+  z-index: -1; 
+}
+
+/*-----CENTER BOX-----*/
+.loginbody {
+  background-color: rgb(0, 0, 0, 0.7); /* background-color: rgba(221, 244, 231, 0.9); */
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 300px;
+  border: 3px solid #7ed957; 
+  display: flex;
+  justify-content: center;  
+  align-items: center;      
+  flex-direction: column;   
+}
+
+/*-----INSIDE CENTER BOX-----*/
+.loginbody form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px; 
+}
+
+/*-----TEXT TITLES-----*/
+.loginbody label {
+  display: block;
+  margin-bottom: 1px;
+  padding: 5px;
+  font-size: x-large;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  color: white;
+  text-shadow: black 2px 2px;
+  font-weight: bold;
+}
+
+/*-----INPUT BOX-----*/
+.loginbody input {
+  width: 100%;            
+  padding: 12px;          
+  border: 1px solid #407257; 
+  border-radius: 6px;     
+  background-color: #7ed957; 
+  text-align: left;     
+  font-size: 16px;        
+}
+
+/*-----PASSWORD DIV-----*/
+.password-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/*-----BOX-----*/
+.password-field input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #407257;
+  border-radius: 6px;
+  background-color: #7ed957; 
+  text-align: left;
+  font-size: 16px;
+}
+
+input::placeholder {
+  color: rgba(26, 25, 25, 0.7); /* soft white */
+}
+
+
+
+/*-----SWITCH ICON-----*/
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(+70%); /* adjust to align vertically */
+  cursor: pointer;
+  font-size: 18px;
+  user-select: none;
+}
+
+/*-----LOGIN BUTTON-----*/
+.loginbody button {
+  width: 100%;                  /* full width */
+  padding: 12px;                /* comfortable size */
+  border: 1px solid #407257;                
+  border-radius: 6px;           /* rounded edges */
+  background: linear-gradient(135deg, #7ed957, #7ed957); /* green gradient */
+  color: black;                 
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;    /* smooth hover effect */
+}
+
+
+
+.loginbody button:hover {
+  background: linear-gradient(135deg, #45a049, #3e8e41); /* darker on hover */
+  transform: translateY(-2px);  /* subtle lift */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  color: white;
+}
+
+.loginbody button:active {
+  transform: translateY(0);     /* pressed back down */
+  box-shadow: none;
+}
+
+/*-----DYNAMIC SIZES-----*/
+@media (max-width: 600px) {
+  .loginbody {
+    width: 100%;          
+    padding: 20px;       
+  }
+
+  .loginbody label {
+    font-size: large;    
+    text-align: center;  
+  }
+
+  .loginbody input, 
+  .loginbody button {
+    font-size: medium;
+    padding: 10px;
+  }
+}
