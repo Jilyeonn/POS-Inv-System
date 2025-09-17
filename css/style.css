@@ -17,6 +17,7 @@ body{
 #navtitle, #navtitle2{
     color: #7ed957;
     float: left;
+    text-shadow: 0 4px 12px rgba(3,0,0,0.10);
 }
 
 #navtitle{
@@ -33,9 +34,11 @@ body{
 #nav-logo{
     margin-top: 5px;
     margin-left: 25px;
-    width: 57px;
-    height: 52px;
+    width: 61px;
+    height: 57px;
     float: left;
+    box-shadow: 3px 4px 12px rgba(0,0,0,0.2);
+    border-radius: 30px;
 }
 
 /* End of Navigation Bar */
@@ -50,16 +53,16 @@ body{
     background-repeat: no-repeat;
 }
 
-h1, h3{
-    padding-left: 50px;
-}
-
 h1{
-    padding-top: 150px;
+    padding-top: 125px;
+    padding-left: 115px;
+    font-family: "Sail", system-ui;
+    font-size: 70px;
 }
 
 h3{
-    padding-bottom: 20px;
+  padding-left: 75px;
+  padding-bottom: 20px;
 }
 
 .login{
@@ -67,8 +70,11 @@ h3{
     text-decoration: none;
     background-color: #7ed957;
     padding: 20px;
-    margin-left: 50px;
+    padding-right: 100px;
+    padding-left: 100px;
+    margin-left: 155px;
     border-radius: 12px;
+    
 }
 .login:hover{
     color: white;

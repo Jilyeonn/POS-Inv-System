@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <title> POS & Inventory System</title>
+        <link rel="stylesheet" type="text/css" href="/css/pos.css">
+        <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
+    </head>
+    <body>
+        <!--Start of Navigation Bar-->
+    <div class = "navbar">
+    <img src="../img/logo.png" id="nav-logo">
+        <p id="navtitle">VHT</p>
+        <p id="navtitle2">Naturals</p>
+        <ul class="nav-links">
+        <li><a href="dashboard.html">Sales and Inventory Dashboard</a></li>
+        <li><a href="pos.html">Point of Sales</a></li>
+        <li><a href="#">Inventory</a></li>
+        <li><a href="#">Log out</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+        </div>
+        <!-- End of Navigation Bar -->
+        <!-- Body of Dashboard (Charts of Sales & Inventory)-->
+        <div class="container">
+        <div class="container-1">
+            
+        </div>
+        <div class="container-2">
+
+        </div>
+        </div>
+        <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.querySelector(".nav-links");
+
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+      hamburger.classList.toggle("active"); 
+    });
+  </script>
+    </body>
+</html>

@@ -1,0 +1,66 @@
+<html>
+    <head>
+        <title> POS & Inventory System</title>
+        <link rel="stylesheet" type="text/css" href="/css/dashboard.css">
+        <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
+    </head>
+    <body>
+        <!--Start of Navigation Bar-->
+    <div class = "navbar">
+    <img src="../img/logo.png" id="nav-logo">
+        <p id="navtitle">VHT</p>
+        <p id="navtitle2">Naturals</p>
+        <ul class="nav-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="pos.html">Point of Sales</a></li>
+        <li><a href="#">Inventory</a></li>
+        <li><a href="#">Log out</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+        </div>
+        </div>
+        <!-- End of Navigation Bar -->
+        <!-- Body of Dashboard (Charts and Graphs of Sales & Inventory)-->
+
+        <div class="container-1">
+        <div class="menu">
+        <button onclick="showPage('sales')">Sales</button>
+        <button onclick="showPage('inventory')">Inventory</button>
+        </div>
+
+        <div id="sales" class="page active">
+        <h2> Sales Dashboard</h2>
+        <div class="card">Total Sales: PHP45,000</div>
+        <div class="card">Top Product: Laptop</div>
+        <div class="card">Monthly Growth: +12%</div>
+        </div>
+
+        <!-- Inventory Dashboard -->
+    <div id="inventory" class="page">
+        <h2>Inventory Dashboard</h2>
+        <div class="card">Items in Stock: 100</div>
+        <div class="card">Low Stock Items: 12</div>
+        <div class="card">Out of Stock: 3</div>
+    </div>
+        </div>
+        <!--SCRIPT NA ITO -->
+        <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.querySelector(".nav-links");
+
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+      hamburger.classList.toggle("active"); 
+    });
+
+    function showPage(pageId) {
+      const pages = document.querySelectorAll('.page');
+      pages.forEach(page => page.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+    }
+  </script>
+    </body>
+</html>
