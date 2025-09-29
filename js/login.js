@@ -4,14 +4,14 @@ import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/fir
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
-  authDomain: "vht-naturals.firebaseapp.com",
-  projectId: "vht-naturals",
-  storageBucket: "vht-naturals.firebasestorage.app",
-  messagingSenderId: "436056260553",
-  appId: "1:436056260553:web:22b7bab3c602522c26f218",
-  measurementId: "G-9HZX3XZJL2"
-};
+    apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
+    authDomain: "vht-naturals.firebaseapp.com",
+    databaseURL: "https://vht-naturals-default-rtdb.firebaseio.com",
+    projectId: "vht-naturals",
+    storageBucket: "vht-naturals.firebasestorage.app",
+    messagingSenderId: "436056260553",
+    appId: "1:436056260553:web:22b7bab3c602522c26f218"
+  };
 
 
 const app = initializeApp(firebaseConfig);

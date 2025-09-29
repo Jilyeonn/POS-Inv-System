@@ -1,0 +1,88 @@
+<html>
+    <head>
+        <title> POS & Inventory System</title>
+        <link rel="stylesheet" type="text/css" href="../css/inventory.css">
+        <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        <script type="module" src="/js/inventory.js"></script>
+          
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    </head>
+    <body>
+        <!--Start of Navigation Bar-->
+    <div class = "navbar">
+    <img src="../img/logo.png" id="nav-logo">
+        <p id="navtitle">VHT</p>
+        <p id="navtitle2">Naturals</p>
+        <ul class="nav-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="pos.html">Point of Sales</a></li>
+        <li><a href="inventory.html">Inventory</a></li>
+        <li><a href="#">Log out</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+        </div>
+        </div>
+        <!-- End of Navigation Bar -->
+        <!-- Body of Inventory (Chart ng inventory)-->
+
+         <main class="main-content" id="mainContent">
+
+    <h1>Inventory Management</h1>
+
+    <div class="buttons">
+      <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+      <button id="resupplyBtn" class="btn"><i class="fa-solid fa-boxes-packing"></i> Resupply Today</button>
+    </div>
+
+    <!-- Inventory Table -->
+<div class="inventory-table">
+  <table id="inventoryTable">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Quantity</th>
+        <th>Expiry</th>
+        <th>Action</th>
+        
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Add Item Form (hidden by default) -->
+<div id="addItemFormContainer" style="display:none; margin-top:20px;">
+  <h3>Add New Item</h3>
+  <form id="addItemForm">
+    <input type="text" id="newItem" placeholder="Item Name" required>
+    <input type="text" id="newCategory" placeholder="Category" required>
+    <input type="number" id="newQuantity" placeholder="Quantity" required>
+    <input type="date" id="newExpiry" required>
+    <button type="submit">Add Item</button>
+    <button type="button" id="cancelAdd">Cancel</button>
+  </form>
+</div>
+
+        <!--SCRIPT NA ITO -->
+        <script>
+    const hamburger = document.getElementById("hamburger");
+    const navLinks = document.querySelector(".nav-links");
+
+    hamburger.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+      hamburger.classList.toggle("active"); 
+    });
+
+    function showPage(pageId) {
+      const pages = document.querySelectorAll('.page');
+      pages.forEach(page => page.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+    }
+  </script>
+    </body>
+</html>

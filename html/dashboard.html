@@ -1,8 +1,12 @@
 <html>
     <head>
         <title> POS & Inventory System</title>
-        <link rel="stylesheet" type="text/css" href="/css/dashboard.css">
+        <link rel="stylesheet" type="text/css" href="../css/dashboard.css">
+        <link rel="stylesheet" type="text/css" href="../css/invchart.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        <script type="module" src="../js/invchart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
         <!--Start of Navigation Bar-->
@@ -13,8 +17,8 @@
         <ul class="nav-links">
         <li><a href="dashboard.html">Dashboard</a></li>
         <li><a href="pos.html">Point of Sales</a></li>
-        <li><a href="#">Inventory</a></li>
-        <li><a href="#">Log out</a></li>
+        <li><a href="inventory.html">Inventory</a></li>
+        <li><a href="/index.html">Log out</a></li>
         </ul>
         <div class="hamburger" id="hamburger">
         <span></span>
@@ -40,12 +44,25 @@
 
         <!-- Inventory Dashboard -->
     <div id="inventory" class="page">
-        <h2>Inventory Dashboard</h2>
-        <div class="card">Items in Stock: 100</div>
-        <div class="card">Low Stock Items: 12</div>
-        <div class="card">Out of Stock: 3</div>
+        <div class="charts-container">
+        <div class="chart-card1">
+            <h3>Supplies Quantity</h3>
+            <canvas id="pieChart1"></canvas>
+        </div>
+        
+        <div class="chart-card2">
+            <h3>Inventory Category Distribution</h3>
+            <canvas id="pieChart2"></canvas>
+        </div>
+        
+        </div>
+        <div class="chart-card3">
+            <h3>Added Supplies This Month</h3>
+            <canvas id="lineChart"></canvas>
+        </div>
     </div>
         </div>
+        
         <!--SCRIPT NA ITO -->
         <script>
     const hamburger = document.getElementById("hamburger");
