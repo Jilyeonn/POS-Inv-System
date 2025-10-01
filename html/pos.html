@@ -2,7 +2,9 @@
     <head>
         <title> POS & Inventory System</title>
         <link rel="stylesheet" type="text/css" href="../css/pos.css">
+        <link rel="stylesheet" type="text/css" href="../css/navbar.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
+        <script type="module" src="../js/pos.js"></script>
     </head>
     <body>
         <!--Start of Navigation Bar-->
@@ -11,10 +13,10 @@
         <p id="navtitle">VHT</p>
         <p id="navtitle2">Naturals</p>
         <ul class="nav-links">
-        <li><a href="dashboard.html">Sales and Inventory Dashboard</a></li>
+        <li><a href="dashboard.html">Dashboard</a></li>
         <li><a href="pos.html">Point of Sales</a></li>
-        <li><a href="#">Inventory</a></li>
-        <li><a href="#">Log out</a></li>
+        <li><a href="inventory.html">Inventory</a></li>
+        <li><a href="/index.html">Log out</a></li>
         </ul>
         <div class="hamburger" id="hamburger">
         <span></span>
@@ -24,14 +26,59 @@
         </div>
         <!-- End of Navigation Bar -->
         <!-- Body of Dashboard (Charts of Sales & Inventory)-->
+
         <div class="container">
         <div class="container-1">
-            
+            <div class="products">
+    <h2>Products</h2>
+    <div class="product-grid">
+      <div class="product-card">
+        <img src="https://via.placeholder.com/150/FF0000/FFFFFF?text=Apple">
+        <div class="product-info">
+          <h3>Strawberry Milk</h3>
+          <p>₱24</p>
+        </div>
+        <button onclick="addToCart('Strawberry Milk', 24)">Add to Cart</button>
+      </div>
+
+      <div class="product-card">
+        <img src="https://via.placeholder.com/150/FFFF00/000000?text=Banana">
+        <div class="product-info">
+          <h3>Wheat bread</h3>
+          <p>₱32</p>
+        </div>
+        <button onclick="addToCart('Wheat bread', 32)">Add to Cart</button>
+      </div>
+
+      <div class="product-card">
+        <img src="https://via.placeholder.com/150/FFA500/FFFFFF?text=Orange">
+        <div class="product-info">
+          <h3>Bread</h3>
+          <p>₱30</p>
+        </div>
+        <button onclick="addToCart('Bread', 30)">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+
         </div>
         <div class="container-2">
 
-        </div>
-        </div>
+    <!-- Orders List -->
+     <!-- Checkout -->
+  <div class="checkout">
+    <h2>Checkout</h2>
+    <div id="cart"></div>
+    <div class="total">Total: $<span id="total">0</span></div>
+    <button onclick="submitOrder()" class="checkout-btn">Confirm Purchase</button>
+
+    <!-- Orders List -->
+    <div class="orders">
+      <h2>Orders List</h2>
+      <div id="ordersList"></div>
+    </div>
+  </div>
+
         <script>
     const hamburger = document.getElementById("hamburger");
     const navLinks = document.querySelector(".nav-links");

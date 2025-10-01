@@ -291,3 +291,97 @@ tr:nth-child(even) {
 #addItemForm button#cancelAdd:hover {
   background: #cc0000;
 }
+
+/* Popup overlay (background dim) */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* semi-transparent black */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999; /* always on top */
+}
+
+/* Popup container */
+.popup {
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  width: 350px;
+  max-width: 90%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Heading */
+.popup h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  text-align: center;
+  color: #333;
+}
+
+/* Form labels and inputs */
+.popup label {
+  display: block;
+  font-size: 14px;
+  margin: 8px 0 4px;
+  color: #555;
+}
+
+.popup input {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Buttons */
+.popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.popup button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+/* Save button */
+.popup .save-btn {
+  background: #28a745;
+  color: #fff;
+}
+
+.popup .save-btn:hover {
+  background: #218838;
+}
+
+/* Cancel button */
+.popup .cancel-btn {
+  background: #dc3545;
+  color: #fff;
+}
+
+.popup .cancel-btn:hover {
+  background: #c82333;
+}
+
+/* Fade-in effect */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+

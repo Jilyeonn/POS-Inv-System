@@ -2,6 +2,7 @@
     <head>
         <title> POS & Inventory System</title>
         <link rel="stylesheet" type="text/css" href="../css/inventory.css">
+        <link rel="stylesheet" type="text/css" href="../css/editpopup.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
         <script type="module" src="../js/inventory.js"></script>
@@ -18,7 +19,7 @@
         <li><a href="dashboard.html">Dashboard</a></li>
         <li><a href="pos.html">Point of Sales</a></li>
         <li><a href="inventory.html">Inventory</a></li>
-        <li><a href="#">Log out</a></li>
+        <li><a href="/index.html">Log out</a></li>
         </ul>
         <div class="hamburger" id="hamburger">
         <span></span>
@@ -35,7 +36,7 @@
 
     <div class="buttons">
       <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
-      <button id="resupplyBtn" class="btn"><i class="fa-solid fa-boxes-packing"></i> Resupply Today</button>
+      <button id="resupplyBtn" class="btn"><i class="fa-solid fa-boxes-packing"></i> Resupply</button>
     </div>
 
     <!-- Inventory Table -->
@@ -43,12 +44,15 @@
   <table id="inventoryTable">
     <thead>
       <tr>
-        <th>Item</th>
+        <th>Item Code</th>
+        <th>Product Name</th>
         <th>Category</th>
         <th>Quantity</th>
+        <th>Stock Status</th>
+        <th>Unit Price</th>
+        <th>Total Value</th>
         <th>Expiry</th>
-        <th>Action</th>
-        
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -58,15 +62,37 @@
 <!-- Add Item Form (hidden by default) -->
 <div id="addItemFormContainer" style="display:none; margin-top:20px;">
   <h3>Add New Item</h3>
-  <form id="addItemForm">
-    <input type="text" id="newItem" placeholder="Item Name" required>
-    <input type="text" id="newCategory" placeholder="Category" required>
-    <input type="number" id="newQuantity" placeholder="Quantity" required>
-    <input type="date" id="newExpiry" required>
-    <button type="submit">Add Item</button>
-    <button type="button" id="cancelAdd">Cancel</button>
-  </form>
+    <form id="addItemForm">
+      <input type="text" id="newCode" placeholder="Item Code" required>
+      <input type="text" id="newItem" placeholder="Product Name" required>
+      <input type="text" id="newCategory" placeholder="Category" required>
+      <input type="number" id="newQuantity" placeholder="Quantity" required>
+      <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
+      <input type="date" id="newExpiry" required>
+      <button type="submit">Add Item</button>
+      <button type="button" id="cancelAdd">Cancel</button>
+    </form>
 </div>
+
+<!-- Edit Popup -->
+<div class="popup-overlay" id="editPopup" style="display:none;">
+  <div class="popup">
+    <h2>Edit Item</h2>
+    <form id="editForm">
+      <label for="editQuantity">Quantity</label>
+      <input type="number" id="editQuantity" name="quantity">
+
+      <label for="editPrice">Unit Price</label>
+      <input type="number" id="editPrice" name="price" step="0.01">
+
+      <div class="popup-buttons">
+        <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
+        <button type="submit" class="save-btn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
         <!--SCRIPT NA ITO -->
         <script>
