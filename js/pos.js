@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
+// 🔹 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
   authDomain: "vht-naturals.firebaseapp.com",
@@ -15,86 +15,74 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-
- 
-const productList = document.getElementById("product-list");
-const cartList = document.getElementById("cart-list");
-const subtotalEl = document.getElementById("subtotal");
-const taxEl = document.getElementById("tax");
+const cartEl = document.getElementById("cart");
 const totalEl = document.getElementById("total");
+const ordersList = document.getElementById("ordersList");
 
 let cart = {};
 
-// --- Load Products from Firestore ---
-async function loadProducts() {
-  const snapshot = await db.collection("products").get();
-  productList.innerHTML = "";
-  snapshot.forEach(doc => {
-    const product = doc.data();
-    const div = document.createElement("div");
-    div.classList.add("product");
-    div.innerHTML = `
-      <h4>${product.name}</h4>
-      <p>₱${product.price}</p>
-      <button onclick="addToCart('${doc.id}', '${product.name}', ${product.price})">Add</button>
-    `;
-    productList.appendChild(div);
-  });
-}
-
-// --- Add to Cart ---
-function addToCart(id, name, price) {
-  if (!cart[id]) {
-    cart[id] = { name, price, qty: 0 };
+// --- Add to Cart (triggered by buttons in HTML)
+window.addToCart = function(name, price) {
+  if (!cart[name]) {
+    cart[name] = { name, price, qty: 0 };
   }
-  cart[id].qty++;
+  cart[name].qty++;
   renderCart();
-}
+};
 
-// --- Render Cart ---
+// --- Render Cart
 function renderCart() {
-  cartList.innerHTML = "";
-  let subtotal = 0;
-  Object.keys(cart).forEach(id => {
-    const item = cart[id];
-    subtotal += item.price * item.qty;
+  cartEl.innerHTML = "";
+  let total = 0;
+
+  Object.values(cart).forEach(item => {
+    total += item.price * item.qty;
+
     const row = document.createElement("div");
+    row.classList.add("cart-item");
     row.innerHTML = `
       ${item.name} x ${item.qty} - ₱${(item.price * item.qty).toFixed(2)}
-      <button onclick="removeFromCart('${id}')">🗑</button>
+      <button class="remove-btn" onclick="removeFromCart('${item.name}')">🗑</button>
     `;
-    cartList.appendChild(row);
+    cartEl.appendChild(row);
   });
-  let tax = subtotal * 0.12;
-  let total = subtotal + tax;
-  subtotalEl.textContent = subtotal.toFixed(2);
-  taxEl.textContent = tax.toFixed(2);
+
   totalEl.textContent = total.toFixed(2);
 }
 
-// --- Remove Item ---
-function removeFromCart(id) {
-  delete cart[id];
+// --- Remove Item
+window.removeFromCart = function(name) {
+  delete cart[name];
   renderCart();
-}
+};
 
-// --- Confirm Order ---
-document.getElementById("confirmOrder").addEventListener("click", async () => {
+// --- Confirm Purchase
+window.submitOrder = function() {
   if (Object.keys(cart).length === 0) return alert("Cart is empty");
 
-  const order = {
+  const newOrderRef = push(ref(db, "orders"));
+  set(newOrderRef, {
     items: cart,
-    createdAt: new Date(),
-    subtotal: parseFloat(subtotalEl.textContent),
-    tax: parseFloat(taxEl.textContent),
-    total: parseFloat(totalEl.textContent)
-  };
+    total: parseFloat(totalEl.textContent),
+    createdAt: Date.now()
+  });
 
-  await db.collection("orders").add(order);
   alert("Order saved!");
   cart = {};
   renderCart();
-});
+};
 
-// Initial Load
-loadProducts();
+// --- Realtime Orders List
+onValue(ref(db, "orders"), snapshot => {
+  ordersList.innerHTML = "";
+  snapshot.forEach(orderSnap => {
+    const order = orderSnap.val();
+    const div = document.createElement("div");
+    div.classList.add("order-card");
+    div.innerHTML = `
+      <strong>Order:</strong> ₱${order.total.toFixed(2)} <br>
+      <small>${new Date(order.createdAt).toLocaleString()}</small>
+    `;
+    ordersList.appendChild(div);
+  });
+});

@@ -42,6 +42,15 @@ document.addEventListener("DOMContentLoaded", () => {
   `;
   tbody.parentElement.after(addItemFormContainer);
 
+  function openAddPopup() {
+  document.getElementById("addPopup").style.display = "flex";
+}
+
+function closeAddPopup() {
+  document.getElementById("addPopup").style.display = "none";
+  document.getElementById("addItemForm").reset();
+}
+
   // 🔹 Edit Item Popup Modal
   const editModal = document.createElement("div");
   editModal.id = "editModal";
