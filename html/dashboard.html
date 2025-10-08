@@ -3,6 +3,7 @@
         <title> POS & Inventory System</title>
         <link rel="stylesheet" type="text/css" href="../css/dashboard.css">
         <link rel="stylesheet" type="text/css" href="../css/invchart.css">
+        <link rel="stylesheet" type="text/css" href="../css/saleschart.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
         <script type="module" src="../js/invchart.js"></script>
@@ -35,11 +36,54 @@
         <button onclick="showPage('inventory')">Inventory</button>
         </div>
 
+        <!-- Sales Dashboard -->
         <div id="sales" class="page active">
-        <h2> Sales Dashboard</h2>
-        <div class="card">Total Sales: PHP45,000</div>
-        <div class="card">Top Product: Laptop</div>
-        <div class="card">Monthly Growth: +12%</div>
+        <section class="cards">
+         <div class="card">
+        <h3>Total Sales (Today)</h3>
+        <div class="value" id="totalToday">₱0.00</div>
+      </div>
+      <div class="card">
+        <h3>Total Sales (This Month)</h3>
+        <div class="value" id="totalMonth">₱0.00</div>
+      </div>
+      <div class="card">
+        <h3>Orders (Today)</h3>
+        <div class="value" id="ordersToday">0</div>
+      </div>
+      <div class="card">
+        <h3>Average Ticket</h3>
+        <div class="value" id="avgTicket">₱0.00</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-grid">
+      <div class="chart-card">
+        <h4>Sales (last 30 days)</h4>
+        <canvas id="lineSales"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Top Products (by revenue)</h4>
+        <canvas id="barProducts"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Sales by Category</h4>
+        <canvas id="pieCategories"></canvas>
+      </div>
+    </section>
+    
+
+    <!-- Recent transactions -->
+    <section class="recent">
+      <h3>Recent Transactions</h3>
+      <table id="recentTable">
+        <thead>
+          <tr><th>Time</th><th>Sale ID</th><th>Items</th><th>Total</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
         </div>
 
         <!-- Inventory Dashboard -->

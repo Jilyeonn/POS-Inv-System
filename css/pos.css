@@ -11,7 +11,7 @@ body{
 
 .container-1{
     margin-top: 90px;
-    margin-left: 70px;
+    margin-left: 20px;
     border:gray solid;
     border-width: 1px;
     width:60%;
@@ -20,8 +20,8 @@ body{
 
 .container-2{
     margin-top: 90px;
-    margin-left: 55px;
-    margin-right: 55px;
+    margin-left: 40px;
+    margin-right: 40px;
     border:gray solid;
     border-width: 1px;
     width:35%;
@@ -137,7 +137,7 @@ body{
       border-radius: 6px;
     }
 
-    button.checkout-btn {
+#checkoutBtn {
       width: 100%;
       padding: 10px;
       font-size: 16px;

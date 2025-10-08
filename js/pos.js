@@ -1,7 +1,16 @@
+// pos.js (replace existing POS script)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  set,
+  onValue,
+  get,
+  runTransaction,
+  update
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// 🔹 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
   authDomain: "vht-naturals.firebaseapp.com",
@@ -15,74 +24,293 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const cartEl = document.getElementById("cart");
+// DOM elements (make sure these exist in your pos.html)
+const productList = document.getElementById("product-list");
+const cartList = document.getElementById("cart");
 const totalEl = document.getElementById("total");
-const ordersList = document.getElementById("ordersList");
+const checkoutBtn = document.getElementById("checkoutBtn");
+const salesList = document.getElementById("salesList");
 
-let cart = {};
-
-// --- Add to Cart (triggered by buttons in HTML)
-window.addToCart = function(name, price) {
-  if (!cart[name]) {
-    cart[name] = { name, price, qty: 0 };
-  }
-  cart[name].qty++;
-  renderCart();
-};
-
-// --- Render Cart
-function renderCart() {
-  cartEl.innerHTML = "";
-  let total = 0;
-
-  Object.values(cart).forEach(item => {
-    total += item.price * item.qty;
-
-    const row = document.createElement("div");
-    row.classList.add("cart-item");
-    row.innerHTML = `
-      ${item.name} x ${item.qty} - ₱${(item.price * item.qty).toFixed(2)}
-      <button class="remove-btn" onclick="removeFromCart('${item.name}')">🗑</button>
-    `;
-    cartEl.appendChild(row);
-  });
-
-  totalEl.textContent = total.toFixed(2);
+if (!productList || !cartList || !totalEl || !checkoutBtn) {
+  console.error("POS: required DOM elements are missing. Ensure product-list, cart, total, checkoutBtn exist.");
 }
 
-// --- Remove Item
-window.removeFromCart = function(name) {
-  delete cart[name];
-  renderCart();
-};
+// Cart structure: { productId: { id, name, price, qty, image } }
+let cart = {};
 
-// --- Confirm Purchase
-window.submitOrder = function() {
-  if (Object.keys(cart).length === 0) return alert("Cart is empty");
+// Helper: format currency
+function formatCurrency(n) {
+  return Number(n).toFixed(2);
+}
 
-  const newOrderRef = push(ref(db, "orders"));
-  set(newOrderRef, {
-    items: cart,
-    total: parseFloat(totalEl.textContent),
-    createdAt: Date.now()
+// 1) Load products from /products and render them
+function loadProducts() {
+  onValue(ref(db, "products"), (snapshot) => {
+    productList.innerHTML = "";
+
+    if (!snapshot.exists()) {
+      productList.innerHTML = "<p style='text-align:center; padding: 20px;'>No products available.</p>";
+      return;
+    }
+
+    snapshot.forEach((childSnap) => {
+      const product = childSnap.val();
+      const id = childSnap.key;
+
+      // Choose image field (compatibility with 'image' or 'imageUrl')
+      const imgSrc = product.image || product.imageUrl || "https://via.placeholder.com/300x200?text=No+Image";
+
+      // product.price may be string in DB; coerce to number
+      const price = parseFloat(product.price ?? product.unitPrice ?? 0);
+      const qtyAvailable = Number(product.quantity ?? 0);
+
+      const card = document.createElement("div");
+      card.className = "product-card";
+      card.innerHTML = `
+        <img src="${imgSrc}" alt="${escapeHtml(product.name ?? '')}" />
+        <div class="product-info">
+          <h3>${escapeHtml(product.name ?? product.item ?? "Unnamed")}</h3>
+          <p>₱${formatCurrency(price)}</p>
+          <small>Stock: ${qtyAvailable}</small>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;padding-top:8px;">
+          <button class="addBtn" data-id="${id}" data-price="${price}" ${qtyAvailable <= 0 ? "disabled" : ""}>Add to cart</button>
+        </div>
+      `;
+      productList.appendChild(card);
+    });
+
+    // attach add-to-cart handlers (delegation not used for clarity)
+    document.querySelectorAll(".addBtn").forEach((b) => {
+      b.addEventListener("click", async (e) => {
+        const id = b.dataset.id;
+        await addToCartById(id);
+      });
+    });
+  }, (err) => {
+    console.error("Error loading products:", err);
   });
+}
 
-  alert("Order saved!");
-  cart = {};
-  renderCart();
-};
+// escape text for insertion to innerHTML
+function escapeHtml(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
-// --- Realtime Orders List
-onValue(ref(db, "orders"), snapshot => {
-  ordersList.innerHTML = "";
-  snapshot.forEach(orderSnap => {
-    const order = orderSnap.val();
+// 2) Add to cart with stock check
+async function addToCartById(id) {
+  try {
+    const prodSnap = await get(ref(db, `products/${id}`));
+    const product = prodSnap.exists() ? prodSnap.val() : null;
+    if (!product) {
+      alert("Product not found.");
+      return;
+    }
+    const price = parseFloat(product.price ?? product.unitPrice ?? 0);
+    const available = Number(product.quantity ?? 0);
+
+    const currentQtyInCart = cart[id] ? cart[id].qty : 0;
+    if (available <= currentQtyInCart) {
+      alert("Not enough stock available.");
+      return;
+    }
+
+    if (!cart[id]) {
+      cart[id] = { id, name: product.name ?? product.item ?? "Unnamed", price, qty: 0, image: product.image || product.imageUrl || "" };
+    }
+    cart[id].qty++;
+    renderCart();
+  } catch (err) {
+    console.error("Add to cart error:", err);
+    alert("Failed to add to cart.");
+  }
+}
+
+// 3) Render cart UI
+function renderCart() {
+  cartList.innerHTML = "";
+  let total = 0;
+
+  const ids = Object.keys(cart);
+  if (ids.length === 0) {
+    cartList.innerHTML = "<p style='text-align:center; color:#666;'>Cart is empty</p>";
+    totalEl.textContent = formatCurrency(0);
+    return;
+  }
+
+  ids.forEach((id) => {
+    const it = cart[id];
+    const lineTotal = it.price * it.qty;
+    total += lineTotal;
+
     const div = document.createElement("div");
-    div.classList.add("order-card");
+    div.className = "cart-item";
     div.innerHTML = `
-      <strong>Order:</strong> ₱${order.total.toFixed(2)} <br>
-      <small>${new Date(order.createdAt).toLocaleString()}</small>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div>
+          <div style="font-weight:600;">${escapeHtml(it.name)}</div>
+          <div style="font-size:0.9rem;color:#666;">₱${formatCurrency(it.price)} x ${it.qty} = ₱${formatCurrency(lineTotal)}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="qtyBtn" data-id="${id}" data-delta="-1">−</button>
+        <span>${it.qty}</span>
+        <button class="qtyBtn" data-id="${id}" data-delta="1">+</button>
+        <button class="removeBtn" data-id="${id}" style="margin-left:8px;background:#e74c3c;color:#fff;border:none;padding:6px;border-radius:6px;cursor:pointer;">Remove</button>
+      </div>
     `;
-    ordersList.appendChild(div);
+    cartList.appendChild(div);
   });
+
+  // attach quantity and remove handlers
+  cartList.querySelectorAll(".qtyBtn").forEach(b => {
+    b.onclick = async (e) => {
+      const id = b.dataset.id;
+      const delta = Number(b.dataset.delta);
+      await changeQuantity(id, delta);
+    };
+  });
+  cartList.querySelectorAll(".removeBtn").forEach(b => {
+    b.onclick = (e) => {
+      const id = b.dataset.id;
+      delete cart[id];
+      renderCart();
+    };
+  });
+
+  totalEl.textContent = formatCurrency(total);
+}
+
+// change item qty after stock check
+async function changeQuantity(id, delta) {
+  if (!cart[id]) return;
+  try {
+    // check available
+    const prodSnap = await get(ref(db, `products/${id}`));
+    const product = prodSnap.exists() ? prodSnap.val() : null;
+    const available = Number(product?.quantity ?? 0);
+    const newQty = cart[id].qty + delta;
+    if (newQty <= 0) {
+      delete cart[id];
+      renderCart();
+      return;
+    }
+    if (newQty > available) {
+      alert("Not enough stock available.");
+      return;
+    }
+    cart[id].qty = newQty;
+    renderCart();
+  } catch (err) {
+    console.error("changeQuantity error:", err);
+    alert("Failed to change quantity.");
+  }
+}
+
+// remove from cart helper (used by inline button handlers if needed)
+window.removeFromCart = function (id) {
+  delete cart[id];
+  renderCart();
+};
+
+// 4) Checkout: validate availability, decrement with transactions, save sale
+checkoutBtn.addEventListener("click", async () => {
+  const items = Object.values(cart);
+  if (items.length === 0) {
+    alert("Cart is empty!");
+    return;
+  }
+
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = "Processing...";
+
+  try {
+    // Step 1: Check all stock before proceeding
+    for (const item of items) {
+      const productSnap = await get(ref(db, `products/${item.id}/quantity`));
+      const inventorySnap = await get(ref(db, `inventory/${item.id}/quantity`));
+
+      const available = productSnap.exists() ? productSnap.val() : 0;
+      if (available < item.qty) {
+        throw new Error(`❌ Not enough stock for ${item.name}. Available: ${available}`);
+      }
+    }
+
+    // Step 2: Deduct from BOTH /products and /inventory
+    for (const item of items) {
+      const productQtyRef = ref(db, `products/${item.id}/quantity`);
+      const inventoryQtyRef = ref(db, `inventory/${item.id}/quantity`);
+
+      // Deduct in /products
+      await runTransaction(productQtyRef, (currentQty) => {
+        const qty = currentQty ?? 0;
+        const newQty = qty - item.qty;
+        return newQty >= 0 ? newQty : 0;
+      });
+
+      // Deduct in /inventory
+      await runTransaction(inventoryQtyRef, (currentQty) => {
+        const qty = currentQty ?? 0;
+        const newQty = qty - item.qty;
+        return newQty >= 0 ? newQty : 0;
+      });
+    }
+
+    // Step 3: Log sale to Firebase
+    const total = parseFloat(totalEl.textContent);
+    const saleData = {
+      items: Object.fromEntries(
+        items.map((it) => [
+          it.id,
+          { name: it.name, qty: it.qty, price: it.price },
+        ])
+      ),
+      total,
+      date: new Date().toLocaleString(),
+    };
+
+    await push(ref(db, "sales"), saleData);
+
+    // Step 4: Success
+    alert("✅ Sale completed successfully! Stock updated in both Inventory and POS.");
+    cart = {};
+    renderCart();
+
+  } catch (error) {
+    console.error("Checkout error:", error);
+    alert(error.message || "Checkout failed.");
+  } finally {
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = "Checkout";
+  }
 });
+
+// 5) Live recent sales list
+if (salesList) {
+  onValue(ref(db, "sales"), (snapshot) => {
+    salesList.innerHTML = "";
+    if (!snapshot.exists()) return;
+    // We'll show newest first
+    const entries = [];
+    snapshot.forEach(snap => {
+      entries.push({ key: snap.key, val: snap.val() });
+    });
+    entries.reverse().forEach(entry => {
+      const s = entry.val;
+      const div = document.createElement("div");
+      div.className = "sale-entry";
+      const date = new Date(s.createdAt ?? Date.now()).toLocaleString();
+      div.innerHTML = `<strong>₱${formatCurrency(s.total ?? 0)}</strong><br><small>${date}</small>`;
+      salesList.appendChild(div);
+    });
+  });
+}
+
+// initialize
+loadProducts();
+renderCart();

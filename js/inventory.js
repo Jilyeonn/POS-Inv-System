@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
+import { getDatabase, ref, push, onValue, remove, get, update, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
@@ -18,11 +17,12 @@ const db = getDatabase(app);
 document.addEventListener("DOMContentLoaded", () => {
   const tbody = document.querySelector("#inventoryTable tbody");
   const addBtn = document.getElementById("addItemBtn");
-  const resupplyBtn = document.getElementById("resupplyBtn"); 
+  const resupplyBtn = document.getElementById("resupplyBtn");
   const inventoryRef = ref(db, "inventory");
-  const resuppliesRef = ref(db, "resupplies"); 
+  const resuppliesRef = ref(db, "resupplies");
+  const productsRef = ref(db, "products"); // 🔹 for PoS connection
 
-  // 🔹 Add Item Form
+  // 🔹 Add Item Form (with automatic PoS sync)
   const addItemFormContainer = document.createElement("div");
   addItemFormContainer.id = "addItemFormContainer";
   addItemFormContainer.style.display = "none";
@@ -42,115 +42,64 @@ document.addEventListener("DOMContentLoaded", () => {
   `;
   tbody.parentElement.after(addItemFormContainer);
 
-  function openAddPopup() {
-  document.getElementById("addPopup").style.display = "flex";
-}
-
-function closeAddPopup() {
-  document.getElementById("addPopup").style.display = "none";
-  document.getElementById("addItemForm").reset();
-}
-
-  // 🔹 Edit Item Popup Modal
-  const editModal = document.createElement("div");
-  editModal.id = "editModal";
-  editModal.style.display = "none";
-  editModal.style.position = "fixed";
-  editModal.style.top = "0";
-  editModal.style.left = "0";
-  editModal.style.width = "100%";
-  editModal.style.height = "100%";
-  editModal.style.background = "rgba(0,0,0,0.5)";
-  editModal.style.justifyContent = "center";
-  editModal.style.alignItems = "center";
-  editModal.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:10px;min-width:300px;">
-      <h3>Edit Item</h3>
-      <form id="editItemForm">
-        <input type="hidden" id="editId">
-        <label>Quantity:</label>
-        <input type="number" id="editQuantity" required><br><br>
-        <label>Unit Price:</label>
-        <input type="number" id="editPrice" step="0.01" required><br><br>
-        <button type="submit">Update</button>
-        <button type="button" id="cancelEdit">Cancel</button>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(editModal);
-
-  const addItemForm = document.getElementById("addItemForm");
-  const cancelAdd = document.getElementById("cancelAdd");
-  const editItemForm = document.getElementById("editItemForm");
-  const cancelEdit = document.getElementById("cancelEdit");
-
+  // --- Add popup controls
   addBtn.addEventListener("click", () => {
     addItemFormContainer.style.display = "block";
   });
-
-  cancelAdd.addEventListener("click", () => {
+  document.getElementById("cancelAdd").addEventListener("click", () => {
     addItemFormContainer.style.display = "none";
-    addItemForm.reset();
+    document.getElementById("addItemForm").reset();
   });
 
-  cancelEdit.addEventListener("click", () => {
-    editModal.style.display = "none";
-    editItemForm.reset();
+  // 🔹 Load Inventory Table
+  onValue(inventoryRef, (snapshot) => {
+    tbody.innerHTML = "";
+    snapshot.forEach((childSnap) => {
+      const data = childSnap.val();
+      const id = childSnap.key;
+
+      const itemCode = data.itemCode ?? "";
+      const item = data.item ?? "";
+      const category = data.category ?? "";
+      const quantity = data.quantity ?? 0;
+      const expiry = data.expiry ?? "";
+      const unitPrice = data.unitPrice ?? 0;
+
+      let stockStatus = "";
+      let stockStyle = "";
+      if (quantity <= 10) {
+        stockStatus = "Low Stock";
+        stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;";
+      } else {
+        stockStatus = "In Stock";
+        stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;";
+      }
+
+      const totalValue = (quantity * unitPrice).toFixed(2);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${itemCode}</td>
+        <td>${item}</td>
+        <td>${category}</td>
+        <td>${quantity}</td>
+        <td style="${stockStyle}">${stockStatus}</td>
+        <td>${unitPrice}</td>
+        <td>${totalValue}</td>
+        <td>${expiry}</td>
+        <td>
+          <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    attachEditHandlers();
+    attachDeleteHandlers();
   });
-
-  // 🔹 Load Inventory
- onValue(inventoryRef, (snapshot) => {
-  tbody.innerHTML = "";
-  snapshot.forEach((childSnap) => {
-    const data = childSnap.val();
-    const id = childSnap.key;
-
-    const itemCode = data.itemCode ?? "";
-    const item = data.item ?? "";
-    const category = data.category ?? "";
-    const quantity = data.quantity ?? 0;
-    const expiry = data.expiry ?? "";
-    const unitPrice = data.unitPrice ?? 0;
-
-    // --- Automated stock status ---
-    let stockStatus = "";
-    let stockStyle = "";
-    if (quantity <= 10) {
-      stockStatus = "Low Stock";
-      stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;"; // light red
-    } else {
-      stockStatus = "In Stock";
-      stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;"; // light green
-    }
-
-    // --- Total value calculation ---
-    const totalValue = (quantity * unitPrice).toFixed(2);
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${itemCode}</td>
-      <td>${item}</td>
-      <td>${category}</td>
-      <td>${quantity}</td>
-      <td style="${stockStyle}">${stockStatus}</td>
-      <td>${unitPrice}</td>
-      <td>${totalValue}</td>
-      <td>${expiry}</td>
-      <td>
-        <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  attachEditHandlers();
-  attachDeleteHandlers();
-});
-
 
   // 🔹 Add Item
-  addItemForm.addEventListener("submit", async (e) => {
+  document.getElementById("addItemForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const itemCode = document.getElementById("newCode").value.trim();
@@ -161,7 +110,7 @@ function closeAddPopup() {
     const expiry = document.getElementById("newExpiry").value;
 
     if (/\d/.test(category)) {
-      alert("Category cannot contain numbers. Please enter a valid category.");
+      alert("Category cannot contain numbers.");
       return;
     }
 
@@ -169,21 +118,35 @@ function closeAddPopup() {
     const totalValue = quantity * unitPrice;
 
     try {
-      await push(inventoryRef, { 
+      // 🔹 Save item to inventory
+      const newRef = push(inventoryRef);
+      await set(newRef, { 
         itemCode, item, category, quantity, 
         stockStatus, unitPrice, totalValue, expiry 
       });
+
+      // 🔹 Also sync item to POS "products"
+      await set(ref(db, `products/${newRef.key}`), {
+        name: item,
+        price: unitPrice,
+        quantity: quantity,
+        category: category,
+        itemCode: itemCode,
+      });
+
+      alert("✅ Item added and synced to PoS!");
       addItemFormContainer.style.display = "none";
-      addItemForm.reset();
+      document.getElementById("addItemForm").reset();
+
     } catch (e) {
       console.error("Add failed:", e);
-      alert("Add failed. Check Firebase config.");
+      alert("❌ Failed to add item. Check Firebase config.");
     }
   });
 
   // 🔹 Resupply Log
   resupplyBtn.addEventListener("click", async () => {
-    const today = new Date().toISOString().split("T")[0]; 
+    const today = new Date().toISOString().split("T")[0];
     try {
       await push(resuppliesRef, { date: today });
       alert("Resupply logged for " + today);
@@ -193,38 +156,70 @@ function closeAddPopup() {
     }
   });
 
-  function attachEditHandlers() {
-  document.querySelectorAll(".editBtn").forEach((btn) => {
-    btn.onclick = () => {
-      const row = btn.closest("tr");
-      const id = btn.dataset.id;
-      const currentQty = row.children[2].textContent;
-      const currentPrice = row.children[4] ? row.children[4].textContent : "";
+  const editModal = document.createElement("div");
+editModal.id = "editModal";
+editModal.style.display = "none";
+editModal.style.position = "fixed";
+editModal.style.top = "0";
+editModal.style.left = "0";
+editModal.style.width = "100%";
+editModal.style.height = "100%";
+editModal.style.background = "rgba(0,0,0,0.5)";
+editModal.style.justifyContent = "center";
+editModal.style.alignItems = "center";
+editModal.innerHTML = `
+  <div style="background:white;padding:20px;border-radius:10px;min-width:300px;">
+    <h3>Edit Item</h3>
+    <form id="editItemForm">
+      <input type="hidden" id="editId">
+      <label>Quantity:</label>
+      <input type="number" id="editQuantity" required><br><br>
+      <label>Unit Price:</label>
+      <input type="number" id="editPrice" step="0.01" required><br><br>
+      <button type="submit">Update</button>
+      <button type="button" id="cancelEdit">Cancel</button>
+    </form>
+  </div>
+`;
+document.body.appendChild(editModal);
 
-      openPopup(id, currentQty, currentPrice);
-    };
-  });
-}
+const editItemForm = document.getElementById("editItemForm");
+const cancelEdit = document.getElementById("cancel-btn");
 
-  // 🔹 Open Edit Popup
-  function openPopup(id, currentQty, currentPrice) {
+// Close edit modal
+cancelEdit.addEventListener("click", () => {
+  editModal.style.display = "none";
+  closeEditPopup();
+});
+
+// ================== 🔹 OPEN EDIT POPUP ================== //
+function openEditPopup(id, currentQty, currentPrice) {
   document.getElementById("editPopup").style.display = "flex";
   document.getElementById("editQuantity").value = currentQty;
   document.getElementById("editPrice").value = currentPrice || "";
   document.getElementById("editForm").dataset.itemId = id; // store the Firebase key
 }
 
-function closePopup() {
+// ================== 🔹 CLOSE EDIT POPUP ================== //
+function closeEditPopup() {
   document.getElementById("editPopup").style.display = "none";
+  editItemForm.reset();
 }
 
-// ================== CLOSE POPUP ================== //
-window.closePopup = function () {
-  document.getElementById("editPopup").style.display = "none";
-  currentEditId = null;
-};
+function attachEditHandlers() {
+  document.querySelectorAll(".editBtn").forEach((btn) => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const snapshot = await get(ref(db, `inventory/${id}`));
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
 
-// ================== SAVE EDIT ================== //
+      // open popup with existing data
+      openEditPopup(id, data.quantity, data.unitPrice);
+    };
+  });
+}
+
 document.getElementById("editForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -232,54 +227,44 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const newQty = document.getElementById("editQuantity").value.trim();
   const newPrice = document.getElementById("editPrice").value.trim();
 
+  if (!newQty || !newPrice) {
+    alert("Please fill out both fields.");
+    return;
+  }
+
   try {
-    // Get current item
-    const snapshot = await get(ref(db, `inventory/${id}`));
-    if (!snapshot.exists()) {
-      alert("Item not found!");
-      return;
-    }
+    // Update inventory
+    await update(ref(db, `inventory/${id}`), {
+      quantity: Number(newQty),
+      unitPrice: Number(newPrice),
+      totalValue: Number(newQty) * Number(newPrice),
+    });
 
-    const currentData = snapshot.val();
+    // Update POS products
+    await update(ref(db, `products/${id}`), {
+      quantity: Number(newQty),
+      price: Number(newPrice),
+    });
 
-    // Prepare update object (only add fields that are changed)
-    const updatedData = {};
-    if (newQty !== "") updatedData.quantity = Number(newQty);
-    if (newPrice !== "") updatedData.unitPrice = Number(newPrice);
-
-    // If nothing was changed, just close popup
-    if (Object.keys(updatedData).length === 0) {
-      alert("No changes made.");
-      closePopup();
-      return;
-    }
-
-    // Merge with existing data
-    await update(ref(db, `inventory/${id}`), updatedData);
-
-    closePopup();
+    alert("✅ Item updated successfully!");
+    closeEditPopup();
   } catch (error) {
     console.error("Update failed:", error);
-    alert("Failed to update item.");
+    alert("❌ Failed to update item.");
   }
-})
-
-
-
+});
+  
   // 🔹 Delete Item
   function attachDeleteHandlers() {
     document.querySelectorAll(".deleteBtn").forEach((btn) => {
       btn.onclick = async () => {
         const id = btn.dataset.id;
-        try {
-          await remove(ref(db, `inventory/${id}`));
-        } catch (e) {
-          console.error("Delete failed:", e);
-          alert("Delete failed. Check permissions.");
-        }
+        if (!confirm("Are you sure you want to delete this item?")) return;
+
+        await remove(ref(db, `inventory/${id}`));
+        await remove(ref(db, `products/${id}`)); // 🔹 remove from PoS as well
+        alert("🗑 Item deleted from inventory and PoS.");
       };
     });
   }
 });
-
-

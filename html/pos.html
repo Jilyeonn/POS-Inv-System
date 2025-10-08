@@ -30,49 +30,27 @@
 
         <div class="container">
         <div class="container-1">
-            <div class="products">
-    <h2>Products</h2>
-    <div class="product-grid">
-      <div class="product-card">
-        <img src="https://via.placeholder.com/150/FF0000/FFFFFF?text=Apple">
-        <div class="product-info">
-          <h3>Strawberry Milk</h3>
-          <p>₱24</p>
-        </div>
-        <button onclick="addToCart('Strawberry Milk', 24)">Add to Cart</button>
-      </div>
+          <div class="products">
+          <div class="products-section">
+  <h2>Products</h2>
+  <div id="product-list" class="product-grid"></div>
+</div>
 
-      <div class="product-card">
-        <img src="https://via.placeholder.com/150/FFFF00/000000?text=Banana">
-        <div class="product-info">
-          <h3>Wheat bread</h3>
-          <p>₱32</p>
-        </div>
-        <button onclick="addToCart('Wheat bread', 32)">Add to Cart</button>
-      </div>
+<!-- CART -->
 
-      <div class="product-card">
-        <img src="https://via.placeholder.com/150/FFA500/FFFFFF?text=Orange">
-        <div class="product-info">
-          <h3>Bread</h3>
-          <p>₱30</p>
-        </div>
-        <button onclick="addToCart('Bread', 30)">Add to Cart</button>
-      </div>
-    </div>
-  </div>
-
-        </div>
-        <div class="container-2">
-
-    <!-- Orders List -->
+  
+</div>
+</div>
+    <div class="container-2">
      <!-- Checkout -->
-  <div class="checkout">
-    <h2>Checkout</h2>
+    <div class="checkout">
+    <h2>Cart</h2>
     <div id="cart"></div>
-    <div class="total">Total: ₱<span id="total">0</span></div>
-    <button onclick="submitOrder()" class="checkout-btn">Confirm Purchase</button>
+    <div class="total">
+      <strong>Total: ₱<span id="total">0.00</span></strong>
     </div>
+      <button id="checkoutBtn">Checkout</button>
+</div>
     </div>
   </div>
 

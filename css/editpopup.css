@@ -76,12 +76,12 @@
 }
 
 /* Cancel button */
-.popup .cancel-btn {
+.popup #cancel-btn {
   background: #dc3545;
   color: #fff;
 }
 
-.popup .cancel-btn:hover {
+.popup #cancel-btn:hover {
   background: #c82333;
 }
 

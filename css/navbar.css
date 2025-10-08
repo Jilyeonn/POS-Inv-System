@@ -5,7 +5,7 @@
     height: 11%;
     align-items: center;
     font-size: 15px;
-    position: absolute;
+    position: fixed;
     top:0;
     background-color: #7ed957;
 }

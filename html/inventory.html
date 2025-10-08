@@ -68,6 +68,7 @@
       <input type="text" id="newCategory" placeholder="Category" required>
       <input type="number" id="newQuantity" placeholder="Quantity" required>
       <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
+      <input type="file" id="itemImage" accept="image/*" /> <!-- NEW FIELD -->
       <input type="date" id="newExpiry" required>
       <button type="submit">Add Item</button>
       <button type="button" id="cancelAdd">Cancel</button>
@@ -86,7 +87,7 @@
       <input type="number" id="editPrice" name="price" step="0.01">
 
       <div class="popup-buttons">
-        <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
+        <button type="button" id="cancel-btn" onclick="closePopup()">Cancel</button>
         <button type="submit" class="save-btn">Save</button>
       </div>
     </form>
