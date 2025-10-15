@@ -1,15 +1,6 @@
 // pos.js (replace existing POS script)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  push,
-  set,
-  onValue,
-  get,
-  runTransaction,
-  update
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {getDatabase,ref,push,set,onValue,get,runTransaction,update} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
@@ -57,17 +48,14 @@ function loadProducts() {
       const product = childSnap.val();
       const id = childSnap.key;
 
-      // Choose image field (compatibility with 'image' or 'imageUrl')
-      const imgSrc = product.image || product.imageUrl || "https://via.placeholder.com/300x200?text=No+Image";
-
-      // product.price may be string in DB; coerce to number
       const price = parseFloat(product.price ?? product.unitPrice ?? 0);
       const qtyAvailable = Number(product.quantity ?? 0);
 
       const card = document.createElement("div");
       card.className = "product-card";
+
+      // ✅ Removed the <img> line
       card.innerHTML = `
-        <img src="${imgSrc}" alt="${escapeHtml(product.name ?? '')}" />
         <div class="product-info">
           <h3>${escapeHtml(product.name ?? product.item ?? "Unnamed")}</h3>
           <p>₱${formatCurrency(price)}</p>
@@ -80,7 +68,7 @@ function loadProducts() {
       productList.appendChild(card);
     });
 
-    // attach add-to-cart handlers (delegation not used for clarity)
+    // attach add-to-cart handlers
     document.querySelectorAll(".addBtn").forEach((b) => {
       b.addEventListener("click", async (e) => {
         const id = b.dataset.id;
@@ -230,54 +218,41 @@ checkoutBtn.addEventListener("click", async () => {
   checkoutBtn.textContent = "Processing...";
 
   try {
-    // Step 1: Check all stock before proceeding
+    // Step 1: Check all stock
     for (const item of items) {
       const productSnap = await get(ref(db, `products/${item.id}/quantity`));
-      const inventorySnap = await get(ref(db, `inventory/${item.id}/quantity`));
-
       const available = productSnap.exists() ? productSnap.val() : 0;
       if (available < item.qty) {
         throw new Error(`❌ Not enough stock for ${item.name}. Available: ${available}`);
       }
     }
 
-    // Step 2: Deduct from BOTH /products and /inventory
+    // Step 2: Deduct from /products and /inventory
     for (const item of items) {
       const productQtyRef = ref(db, `products/${item.id}/quantity`);
       const inventoryQtyRef = ref(db, `inventory/${item.id}/quantity`);
 
-      // Deduct in /products
-      await runTransaction(productQtyRef, (currentQty) => {
-        const qty = currentQty ?? 0;
-        const newQty = qty - item.qty;
-        return newQty >= 0 ? newQty : 0;
-      });
-
-      // Deduct in /inventory
-      await runTransaction(inventoryQtyRef, (currentQty) => {
-        const qty = currentQty ?? 0;
-        const newQty = qty - item.qty;
-        return newQty >= 0 ? newQty : 0;
-      });
+      await runTransaction(productQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
+      await runTransaction(inventoryQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
     }
 
-    // Step 3: Log sale to Firebase
+    // ✅ Step 3: Log sale (compatible with saleschart.js)
     const total = parseFloat(totalEl.textContent);
     const saleData = {
-      items: Object.fromEntries(
-        items.map((it) => [
-          it.id,
-          { name: it.name, qty: it.qty, price: it.price },
-        ])
-      ),
+      id: `sale_${Date.now()}`,
       total,
-      date: new Date().toLocaleString(),
+      timestamp: Date.now(),
+      items: items.map((it) => ({
+        productId: it.id,
+        name: it.name,
+        price: it.price,
+        quantity: it.qty,
+      })),
     };
 
     await push(ref(db, "sales"), saleData);
 
-    // Step 4: Success
-    alert("✅ Sale completed successfully! Stock updated in both Inventory and POS.");
+    alert("✅ Sale completed successfully! Stock updated and logged in sales.");
     cart = {};
     renderCart();
 
@@ -314,3 +289,4 @@ if (salesList) {
 // initialize
 loadProducts();
 renderCart();
+
