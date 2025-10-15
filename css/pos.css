@@ -10,29 +10,18 @@ body{
 }
 
 .container-1{
-    margin-top: 90px;
+    margin-top: 80px;
     margin-left: 20px;
-    border:gray solid;
-    border-width: 1px;
-    width:60%;
-    height:450px;
-}
-
-.container-2{
-    margin-top: 90px;
-    margin-left: 40px;
-    margin-right: 40px;
-    border:gray solid;
-    border-width: 1px;
-    width:35%;
-    height:450px;
+    width:62%;
+    height:470px;
+    border-right: 1px solid gray;
+    top: 0;
 }
 
 .products {
       flex: 2;
-      background: #f9f9f9;
-      padding: 20px;
-      border-right: 2px solid #ddd;
+      padding-top: 10px;
+      padding-bottom: 10px;
       overflow-y: auto;
     }
 
@@ -65,7 +54,8 @@ body{
     }
 
     .product-info {
-      padding: 10px;
+      padding-top: 10px;
+      padding-bottom: 10px;
       flex-grow: 1;
     }
 
@@ -97,8 +87,10 @@ body{
 
     .checkout {
       flex: 1;
-      background: #fff;
-      padding: 20px;
+      padding: 90px 20px 0 20px;
+      width:100%;
+      height:350px;
+      
     }
 
     .checkout h2 {
@@ -119,6 +111,7 @@ body{
     .total {
       font-weight: bold;
       margin: 15px 0;
+      bottom: 0;
     }
 
     button.remove-btn {
@@ -143,7 +136,9 @@ body{
       font-size: 16px;
       background: #7ed957;
       border-radius: 8px;
+      bottom: 0;
     }
+    
      .orders { 
         margin-top: 20px; 
     }

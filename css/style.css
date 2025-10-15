@@ -15,7 +15,7 @@ body{
 }
 
 #navtitle, #navtitle2{
-    color: #7ed957;
+    color: white;
     float: left;
     text-shadow: 0 4px 12px rgba(3,0,0,0.10);
 }
@@ -48,7 +48,7 @@ body{
 .homebody{
     height: 100%;
     width:100%;
-     background-image: url("../img/homepg1.png");
+    background-image: url("../img/bghome.png");
     background-size:cover;
     background-repeat: no-repeat;
 }
@@ -63,6 +63,7 @@ h1{
 h3{
   padding-left: 75px;
   padding-bottom: 20px;
+  color: white;
 }
 
 .login{
@@ -79,6 +80,12 @@ h3{
 .login:hover{
     color: white;
     box-shadow: 3px 3px 5px 0 gray;
+}
+img{
+  height: 20%;
+  weight:20%;
+  margin-left: 55px;
+  margin-top: 165px;
 }
 
 /* End of Body */
