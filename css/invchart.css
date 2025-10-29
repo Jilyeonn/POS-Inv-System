@@ -1,41 +1,52 @@
-.charts-container {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  margin-top: 20px;
-}
 
-.chart-card1, .chart-card2, .chart-card3{
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+body{
+    margin: 0;
+    font-family: 'Russo One', sans-serif;
+    background-color: white;
+}
+.card {
+  background: var(--card);
+  padding: 14px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+  border: 1px solid rgba(255,255,255,0.02);
+  }
+.card h3 {
+      font-size:0.9rem;
+      color: #555;
+      margin: 0 0 8px 0; 
+}
+  .card p {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: black;
+      margin: 0;
+  }
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
 }
 
 .chart-card1{
-    margin-left: 18%;
-    width: 30%;
-    height: 25%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  width: 100%;
+  font-size: 14px;
 }
 
-.chart-card2{
-    width: 30%;
-    height: 25%;
+.chart-card1 h4 { 
+    margin:0 0 17px 0; 
+    color: black;
+    font-size: 14px;
 }
 
-.chart-card3{
-    width: 50%;
-    height: 75%;
-    margin-left: 25%;
-}
 
-.chart-card1, .chart-card2 , .chart-card3 h3 {
-  margin-bottom: 15px;
-  font-size: 15px;
-  color: #407257;
-}
-
-canvas {
+.chart-card1 canvas {
   width: 100% ;
-  height: 300px ;
+  max-width: 700px; 
+  aspect-ratio: 1 / 1;      /* keeps it perfectly square */
 }

@@ -3,6 +3,7 @@
         <title> POS & Inventory System</title>
         <link rel="stylesheet" type="text/css" href="../css/inventory.css">
         <link rel="stylesheet" type="text/css" href="../css/editpopup.css">
+        <link rel="stylesheet" type="text/css" href="../css/navbar.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
         <script type="module" src="../js/inventory.js"></script>
@@ -37,9 +38,11 @@
     <div class="buttons">
       <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
       <button id="resupplyBtn" class="btn"><i class="fa-solid fa-boxes-packing"></i> Resupply</button>
+      <input type="text"  class="btn" id="searchItemInput" placeholder="Search by code, name, or category...">
     </div>
 
     <!-- Inventory Table -->
+<div id="Inventory">
 <div class="inventory-table">
   <table id="inventoryTable">
     <thead>
@@ -57,6 +60,7 @@
     </thead>
     <tbody></tbody>
   </table>
+</div>
 </div>
 
 <!-- Add Item Form (hidden by default) -->

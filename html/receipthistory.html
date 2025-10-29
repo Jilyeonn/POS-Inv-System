@@ -1,11 +1,11 @@
 <html>
     <head>
         <title> POS & Inventory System</title>
-        <link rel="stylesheet" type="text/css" href="../css/pos.css">
+        <link rel="stylesheet" type="text/css" href="../css/receipt.css">
         <link rel="stylesheet" type="text/css" href="../css/navbar.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
         <script src=""></script>
-        <script type="module" src="../js/pos.js"></script>
+        <script type="module" src="../js/receipt.js"></script>
     </head>
     <body>
         <!--Start of Navigation Bar-->
@@ -26,49 +26,29 @@
     </div>
         </div>
         <!-- End of Navigation Bar -->
-        <!-- Body of Dashboard (Charts of Sales & Inventory)-->
+        <!-- Body of Transaction History -->
 
-        <div class="container">
-        <div class="container-1">
-          <div class="products">
-          <div class="products-section">
-  <h2>Products</h2>
-  <div id="product-list" class="product-grid"></div>
-</div>
-</div>
-</div>
+        <body>
+    <button id="downloadPDF">📄 Download PDF</button>
+    <div class="table-container">
+    <input type="text" id="searchInput" placeholder="Search by order ID or date...">
 
-<div class="vl"> </div>
-     <!-- cart -->
-    <div class="checkout">
-    <h2>Cart</h2>
-    <div id="cart"></div>
-    <div class="total">
-      <strong>Total: ₱<span id="total">0.00</span></strong>
-    </div>
-      <button id="checkoutBtn">Checkout</button>
-</div>
-  </div>
 
-  <!-- E-Receipt Popup -->
-<div id="receiptPopup">
-  <div style="background:white;padding:20px;border-radius:10px;width:360px;text-align:center;">
-    <h3>E-Receipt</h3>
-    <p><strong>Order No:</strong> <span id="receiptNumber"></span></p>
-    <table class="receipttable">
+    <table id="transactionsTable">
       <thead>
         <tr>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Price</th>
+          <th>Order ID</th>
+          <th>Date</th>
+          <th>Items</th>
+          <th>Total</th>
         </tr>
       </thead>
-      <tbody id="receiptItems"></tbody>
+      <tbody id="transactionBody">
+        <tr><td colspan="7" style="text-align:center;">Loading transactions...</td></tr>
+      </tbody>
     </table>
-    <p><strong>Total:</strong> ₱<span id="receiptTotal"></span></p>
-    <button onclick="closeReceipt()" class="creceiptbtn">Close</button>
   </div>
-</div>
+        </body>
 
 
         <script>
@@ -80,5 +60,7 @@
       hamburger.classList.toggle("active"); 
     });
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     </body>
 </html>

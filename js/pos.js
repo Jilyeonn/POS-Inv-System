@@ -1,6 +1,5 @@
-// pos.js (replace existing POS script)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {getDatabase,ref,push,set,onValue,get,runTransaction,update} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, get, runTransaction, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
@@ -15,26 +14,51 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// DOM elements (make sure these exist in your pos.html)
+// =================== 🔹 DOM ELEMENTS 🔹 ===================
 const productList = document.getElementById("product-list");
 const cartList = document.getElementById("cart");
 const totalEl = document.getElementById("total");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const salesList = document.getElementById("salesList");
 
+// Receipt popup elements (add them in HTML)
+const receiptPopup = document.getElementById("receiptPopup");
+const receiptNumberEl = document.getElementById("receiptNumber");
+const receiptItemsEl = document.getElementById("receiptItems");
+const receiptTotalEl = document.getElementById("receiptTotal");
+
 if (!productList || !cartList || !totalEl || !checkoutBtn) {
   console.error("POS: required DOM elements are missing. Ensure product-list, cart, total, checkoutBtn exist.");
 }
 
-// Cart structure: { productId: { id, name, price, qty, image } }
 let cart = {};
 
-// Helper: format currency
 function formatCurrency(n) {
   return Number(n).toFixed(2);
 }
 
-// 1) Load products from /products and render them
+// ======================= 🔹 SYNC INVENTORY → PRODUCTS 🔹 =======================
+// Whenever inventory changes (like from your resupply form), this listener
+// automatically updates the /products node so PoS instantly reflects new stock.
+onValue(ref(db, "inventory"), async (snapshot) => {
+  if (!snapshot.exists()) return;
+
+  const inventoryData = snapshot.val();
+  for (const [id, item] of Object.entries(inventoryData)) {
+    // Sync each inventory item’s quantity and price to /products
+    await update(ref(db, `products/${id}`), {
+      name: item.name ?? item.item ?? "Unnamed",
+      price: parseFloat(item.price ?? item.unitPrice ?? 0),
+      quantity: Number(item.quantity ?? 0),
+      image: item.image ?? item.imageUrl ?? ""
+    });
+  }
+  console.log("✅ Synced latest inventory changes to products for POS display.");
+});
+// ==============================================================================
+
+
+// ======================= 🔹 LOAD PRODUCTS TO POS 🔹 ============================
 function loadProducts() {
   onValue(ref(db, "products"), (snapshot) => {
     productList.innerHTML = "";
@@ -54,7 +78,6 @@ function loadProducts() {
       const card = document.createElement("div");
       card.className = "product-card";
 
-      // ✅ Removed the <img> line
       card.innerHTML = `
         <div class="product-info">
           <h3>${escapeHtml(product.name ?? product.item ?? "Unnamed")}</h3>
@@ -68,7 +91,6 @@ function loadProducts() {
       productList.appendChild(card);
     });
 
-    // attach add-to-cart handlers
     document.querySelectorAll(".addBtn").forEach((b) => {
       b.addEventListener("click", async (e) => {
         const id = b.dataset.id;
@@ -79,8 +101,8 @@ function loadProducts() {
     console.error("Error loading products:", err);
   });
 }
+// ==============================================================================
 
-// escape text for insertion to innerHTML
 function escapeHtml(s) {
   if (!s) return "";
   return String(s)
@@ -90,7 +112,7 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-// 2) Add to cart with stock check
+// ======================= 🔹 ADD TO CART, RENDER CART, CHECKOUT 🔹 =======================
 async function addToCartById(id) {
   try {
     const prodSnap = await get(ref(db, `products/${id}`));
@@ -119,7 +141,6 @@ async function addToCartById(id) {
   }
 }
 
-// 3) Render cart UI
 function renderCart() {
   cartList.innerHTML = "";
   let total = 0;
@@ -155,7 +176,6 @@ function renderCart() {
     cartList.appendChild(div);
   });
 
-  // attach quantity and remove handlers
   cartList.querySelectorAll(".qtyBtn").forEach(b => {
     b.onclick = async (e) => {
       const id = b.dataset.id;
@@ -174,11 +194,9 @@ function renderCart() {
   totalEl.textContent = formatCurrency(total);
 }
 
-// change item qty after stock check
 async function changeQuantity(id, delta) {
   if (!cart[id]) return;
   try {
-    // check available
     const prodSnap = await get(ref(db, `products/${id}`));
     const product = prodSnap.exists() ? prodSnap.val() : null;
     const available = Number(product?.quantity ?? 0);
@@ -200,13 +218,12 @@ async function changeQuantity(id, delta) {
   }
 }
 
-// remove from cart helper (used by inline button handlers if needed)
 window.removeFromCart = function (id) {
   delete cart[id];
   renderCart();
 };
 
-// 4) Checkout: validate availability, decrement with transactions, save sale
+// 🔹 Checkout (with e-receipt)
 checkoutBtn.addEventListener("click", async () => {
   const items = Object.values(cart);
   if (items.length === 0) {
@@ -218,31 +235,30 @@ checkoutBtn.addEventListener("click", async () => {
   checkoutBtn.textContent = "Processing...";
 
   try {
-    // Step 1: Check all stock
     for (const item of items) {
       const productSnap = await get(ref(db, `products/${item.id}/quantity`));
       const available = productSnap.exists() ? productSnap.val() : 0;
       if (available < item.qty) {
-        throw new Error(`❌ Not enough stock for ${item.name}. Available: ${available}`);
+        throw new Error(`Not enough stock for ${item.name}. Available: ${available}`);
       }
     }
 
-    // Step 2: Deduct from /products and /inventory
     for (const item of items) {
       const productQtyRef = ref(db, `products/${item.id}/quantity`);
       const inventoryQtyRef = ref(db, `inventory/${item.id}/quantity`);
-
       await runTransaction(productQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
       await runTransaction(inventoryQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
     }
 
-    // ✅ Step 3: Log sale (compatible with saleschart.js)
+      // 🔸 Save sale record
     const total = parseFloat(totalEl.textContent);
+    const orderNumber = generateOrderNumber();
     const saleData = {
       id: `sale_${Date.now()}`,
+      orderNumber,
       total,
       timestamp: Date.now(),
-      items: items.map((it) => ({
+      items: items.map(it => ({
         productId: it.id,
         name: it.name,
         price: it.price,
@@ -250,9 +266,9 @@ checkoutBtn.addEventListener("click", async () => {
       })),
     };
 
-    await push(ref(db, "sales"), saleData);
 
-    alert("✅ Sale completed successfully! Stock updated and logged in sales.");
+    await push(ref(db, "sales"), saleData);
+    showReceipt(saleData);
     cart = {};
     renderCart();
 
@@ -265,28 +281,49 @@ checkoutBtn.addEventListener("click", async () => {
   }
 });
 
-// 5) Live recent sales list
+// ======================= 🔹 E-RECEIPT POPUP 🔹 =======================
+function generateOrderNumber() {
+  const d = new Date();
+  return `ORD-${d.getFullYear().toString().slice(-2)}${(d.getMonth()+1)
+    .toString().padStart(2,"0")}${d.getDate().toString().padStart(2,"0")}-${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
+}
+
+function showReceipt(order) {
+  if (!receiptPopup) return;
+  const rows = order.items.map(
+    (i) =>
+      `<tr><td>${i.name}</td><td>${i.quantity}</td><td>₱${formatCurrency(i.price)}</td></tr>`
+  ).join("");
+
+  receiptNumberEl.textContent = order.orderNumber;
+  receiptItemsEl.innerHTML = rows;
+  receiptTotalEl.textContent = formatCurrency(order.total);
+
+  receiptPopup.style.display = "flex";
+}
+
+window.closeReceipt = function () {
+  if (receiptPopup) receiptPopup.style.display = "none";
+};
+// ======================= 🔹 LIVE SALES LIST 🔹 =======================
 if (salesList) {
   onValue(ref(db, "sales"), (snapshot) => {
     salesList.innerHTML = "";
     if (!snapshot.exists()) return;
-    // We'll show newest first
     const entries = [];
     snapshot.forEach(snap => {
       entries.push({ key: snap.key, val: snap.val() });
     });
     entries.reverse().forEach(entry => {
       const s = entry.val;
+      const date = new Date(s.createdAt ?? Date.now()).toLocaleString();
       const div = document.createElement("div");
       div.className = "sale-entry";
-      const date = new Date(s.createdAt ?? Date.now()).toLocaleString();
       div.innerHTML = `<strong>₱${formatCurrency(s.total ?? 0)}</strong><br><small>${date}</small>`;
       salesList.appendChild(div);
     });
   });
 }
 
-// initialize
 loadProducts();
 renderCart();
-

@@ -11,6 +11,7 @@
         <script type="module" src="../js/saleschart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
+
     <body>
         <!--Start of Navigation Bar-->
     <div class = "navbar">
@@ -21,6 +22,7 @@
         <li><a href="dashboard.html">Dashboard</a></li>
         <li><a href="pos.html">Point of Sales</a></li>
         <li><a href="inventory.html">Inventory</a></li>
+        <li><a href="receipthistory.html">Transaction History</a></li>
         <li><a href="/index.html">Log out</a></li>
         </ul>
         <div class="hamburger" id="hamburger">
@@ -54,50 +56,100 @@
         <div class="value" id="ordersToday">0</div>
       </div>
       <div class="card">
-        <h3>Average Sales</h3>
+        <h3>Average Sales (Today) </h3>
         <div class="value" id="avgTicket">₱0.00</div>
       </div>
     </section>
 
     <!-- Charts -->
     <section class="charts-grid">
-      <div class="chart-card">
-        <h4>Sales (last 30 days)</h4>
+    <div class="chart-card">
+    <div class="chart-header">
+    <h4>Sales (by period)</h4>
+    <select id="salesPeriodSelect">
+      <option value="weekly">Weekly</option>
+      <option value="monthly" selected>Monthly</option>
+      <option value="quarterly">Quarterly</option>
+    </select>
+  </div>
         <canvas id="lineSales"></canvas>
       </div>
-      <div class="chart-card">
-        <h4>Top Products (by revenue)</h4>
+
+
+      <div class="chart-card" class="chart-card full-width">
+      <h4> Top Products (by revenue)</h4>
         <canvas id="barProducts"></canvas>
       </div>
       
-    
-    </section>
-      <div class="sales-chartcard">
-        <h4>Sales by Category</h4>
+    <div class="chart-card">
+        <h4>Sales by Category </h4>
         <canvas id="pieCategories"></canvas>
       </div>
-    
+      <!-- Transaction History Preview Table -->
+  <div class="chart-card">
+    <h4>Recent Transactions</h4>
+    <table id="transactionHistory">
+      <thead>
+        <tr>
+          <th>Order No. </th>
+          <th>Date - Time </th>
+          <th>Item</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filled dynamically -->
+      </tbody>
+    </table>
+  </div>
         </div>
+    </section>
+      
 
         <!-- Inventory Dashboard -->
-    <div id="inventory" class="page">
-        <div class="charts-container">
+  <div id="inventory" class="page">
+    <section class="cards">
+    <div class="card">
+      <h3>Total Items</h3>
+      <p id="totalItems">0</p>
+    </div>
+
+    <div class="card">
+      <h3>Total Quantity</h3>
+      <p id="totalQty">0</p>
+    </div>
+
+    <div class="card">
+      <h3>Total Value</h3>
+      <p id="totalValue">₱0</p>
+    </div>
+
+    <div class="card">
+      <h3>Low Stock Items</h3>
+      <p id="lowStock">0</p>
+    </div>
+    </section>
+
+
+    <div class="charts-container">
         <div class="chart-card1">
             <h3>Supplies Quantity</h3>
             <canvas id="pieChart1"></canvas>
         </div>
         
-        <div class="chart-card2">
+        <div class="chart-card1">
             <h3>Inventory Category Distribution</h3>
             <canvas id="pieChart2"></canvas>
         </div>
         
-        </div>
-        <div class="chart-card3">
+        <div class="chart-card1">
             <h3>Added Supplies This Month</h3>
             <canvas id="lineChart"></canvas>
         </div>
+
     </div>
+  </div>
+    
         </div>
         
         <!--SCRIPT NA ITO -->

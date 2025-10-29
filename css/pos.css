@@ -149,3 +149,31 @@ body{
         border-radius: 8px; 
         box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     }
+
+#receiptPopup{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.6);
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+  }
+
+.receipttable{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+  text-align:center
+}
+.creceiptbtn{
+  margin-top:10px;
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  background:#7ed957;
+  color:white;
+}

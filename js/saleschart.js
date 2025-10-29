@@ -1,56 +1,56 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onChildAdded, onChildChanged, onChildRemoved, get, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onChildAdded, onChildChanged, onChildRemoved, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
-    authDomain: "vht-naturals.firebaseapp.com",
-    databaseURL: "https://vht-naturals-default-rtdb.firebaseio.com",
-    projectId: "vht-naturals",
-    storageBucket: "vht-naturals.firebasestorage.app",
-    messagingSenderId: "436056260553",
-    appId: "1:436056260553:web:22b7bab3c602522c26f218"
-  };
+  apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
+  authDomain: "vht-naturals.firebaseapp.com",
+  databaseURL: "https://vht-naturals-default-rtdb.firebaseio.com",
+  projectId: "vht-naturals",
+  storageBucket: "vht-naturals.firebasestorage.app",
+  messagingSenderId: "436056260553",
+  appId: "1:436056260553:web:22b7bab3c602522c26f218"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  
-const SALES_NODE = "sales"; // change if your PoS writes sales to another path
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ---------- Config ----------
+const SALES_NODE = "sales";
+const PRODUCTS_NODE = "products";
 const DAYS_TO_SHOW = 30;
-const DATE_OPTIONS = { year: 'numeric', month: 'short', day: 'numeric' };
 
-// ---------- DOM elements ----------
+let productCategoryMap = {};
+let salesList = {};
+let salesByDay = {};
+let productTotals = {};
+let categoryTotals = {};
+let currentPeriod = "monthly";
+
+// ---------- DOM ----------
 const lastUpdatedEl = document.getElementById('lastUpdated');
 const totalTodayEl = document.getElementById('totalToday');
 const totalMonthEl = document.getElementById('totalMonth');
 const ordersTodayEl = document.getElementById('ordersToday');
 const avgTicketEl = document.getElementById('avgTicket');
 const recentTbody = document.querySelector('#recentTable tbody');
-
-// ---------- In-memory aggregates ----------
-let salesList = {}; // saleId -> sale object
-let salesByDay = {}; // 'YYYY-MM-DD' -> total
-let productTotals = {}; // productId -> {name, revenue, qty}
-let categoryTotals = {}; // category -> revenue
+const transactionTbody = document.querySelector('#transactionHistory tbody');
 
 // ---------- Chart instances ----------
 let lineChart, barChart, pieChart;
 
+// ---------- Helpers ----------
 function formatCurrency(num) {
-  // local currency format (Philippines peso)
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(num);
 }
 
 function dateKey(ts) {
-  const d = new Date(ts);
-  // YYYY-MM-DD
-  return d.toISOString().slice(0,10);
+  return new Date(ts).toISOString().slice(0, 10);
 }
 
-// initialize empty arrays for last N days
 function buildDaysArray(n) {
   const arr = [];
   const today = new Date();
-  for (let i = n-1; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     arr.push(dateKey(d.getTime()));
@@ -62,16 +62,25 @@ function ensureDayExists(key) {
   if (!salesByDay[key]) salesByDay[key] = 0;
 }
 
-// ---------- Chart setup ----------
+// ---------- Generate Order Number ----------
+function generateOrderNumber() {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const rand = Math.floor(1000 + Math.random() * 9000); // random 4 digits
+  return `ORD-${y}${m}${d}-${rand}`;
+}
+
+// ---------- Create Charts ----------
 function createCharts() {
-  // Line - sales over time
   const ctxLine = document.getElementById('lineSales').getContext('2d');
   lineChart = new Chart(ctxLine, {
     type: 'line',
     data: {
       labels: buildDaysArray(DAYS_TO_SHOW),
       datasets: [{
-        label: 'Daily sales',
+        label: 'Daily Sales',
         data: Array(DAYS_TO_SHOW).fill(0),
         tension: 0.3,
         fill: true,
@@ -86,7 +95,6 @@ function createCharts() {
     }
   });
 
-  // Bar - top products
   const ctxBar = document.getElementById('barProducts').getContext('2d');
   barChart = new Chart(ctxBar, {
     type: 'bar',
@@ -94,18 +102,30 @@ function createCharts() {
     options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
   });
 
-  // Pie - categories
   const ctxPie = document.getElementById('pieCategories').getContext('2d');
   pieChart = new Chart(ctxPie, {
     type: 'pie',
-    data: { labels: [], datasets: [{ data: [] }] },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        backgroundColor: [],
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        title: { display: true, text: 'Category Sales Distribution' }
+      }
+    }
   });
 }
 
-// ---------- Update visual aggregates & UI ----------
+// ---------- Recalculate & Render ----------
 function recalcAggregatesAndRender() {
-  // reset
   salesByDay = {};
   productTotals = {};
   categoryTotals = {};
@@ -121,7 +141,6 @@ function recalcAggregatesAndRender() {
     totalAll += saleTotal;
     totalCount++;
 
-    // items
     if (Array.isArray(sale.items)) {
       for (const it of sale.items) {
         const pid = it.productId || it.id || it.product || `unknown-${it.name}`;
@@ -133,19 +152,18 @@ function recalcAggregatesAndRender() {
         productTotals[pid].revenue += revenue;
         productTotals[pid].qty += qty;
 
-        const category = it.category || 'Uncategorized';
+        const category = it.category || productCategoryMap[pid] || 'Uncategorized';
         if (!categoryTotals[category]) categoryTotals[category] = 0;
         categoryTotals[category] += revenue;
       }
     }
   }
 
-  // Update summary cards
+  // Cards
   const todayKey = dateKey(Date.now());
   const monthStart = new Date(); monthStart.setDate(1);
   const monthStartKey = dateKey(monthStart.getTime());
   let totalToday = salesByDay[todayKey] || 0;
-  // month total = sum of day keys >= month start
   let totalMonth = 0;
   for (const k in salesByDay) if (k >= monthStartKey) totalMonth += salesByDay[k];
 
@@ -154,108 +172,146 @@ function recalcAggregatesAndRender() {
   ordersTodayEl.textContent = Object.values(salesList).filter(s => dateKey(s.timestamp) === todayKey).length;
   avgTicketEl.textContent = totalCount ? formatCurrency(totalAll / totalCount) : formatCurrency(0);
 
-  // Update line chart (last N days)
-  const days = buildDaysArray(DAYS_TO_SHOW);
-  const lineData = days.map(d => salesByDay[d] || 0);
-  lineChart.data.labels = days.map(l => new Date(l).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
-  lineChart.data.datasets[0].data = lineData;
+  // Charts
+  const days = buildDaysArray(currentPeriod === 'weekly' ? 7 : 30);
+  const labels = days.map(d => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+  const dataPoints = days.map(d => salesByDay[d] || 0);
+  lineChart.data.labels = labels;
+  lineChart.data.datasets[0].data = dataPoints;
+  lineChart.data.datasets[0].label = `Sales (${currentPeriod})`;
   lineChart.update();
 
-  // Update bar chart (top products by revenue)
   const topProducts = Object.entries(productTotals)
-    .map(([id, v]) => ({ id, name: v.name, revenue: v.revenue, qty: v.qty }))
-    .sort((a,b) => b.revenue - a.revenue)
+    .map(([id, v]) => ({ name: v.name, revenue: v.revenue }))
+    .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 8);
   barChart.data.labels = topProducts.map(p => p.name);
   barChart.data.datasets[0].data = topProducts.map(p => p.revenue);
   barChart.update();
 
-  // Update pie chart categories
-  const categories = Object.entries(categoryTotals).map(([name, revenue]) => ({ name, revenue })).sort((a,b)=>b.revenue-a.revenue);
-  pieChart.data.labels = categories.map(c => c.name);
-  pieChart.data.datasets[0].data = categories.map(c => c.revenue);
+  const categories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const labelsPie = categories.map(c => c[0]);
+  const dataPie = categories.map(c => c[1]);
+  const colors = labelsPie.map((_, i) => `hsl(${(i * 360 / labelsPie.length) % 360}, 70%, 60%)`);
+
+  pieChart.data.labels = labelsPie;
+  pieChart.data.datasets[0].data = dataPie;
+  pieChart.data.datasets[0].backgroundColor = colors;
   pieChart.update();
 
-  // Update recent transactions table (sort by timestamp desc)
-  const recent = Object.values(salesList).sort((a,b)=>b.timestamp - a.timestamp).slice(0,10);
-  recentTbody.innerHTML = '';
-  for (const s of recent) {
-    const tr = document.createElement('tr');
-    const time = new Date(s.timestamp).toLocaleString();
-    const itemsText = (s.items || []).map(it => `${it.name || it.productName || 'Item'} x${it.quantity||it.qty||1}`).join(', ');
-    const totalVal = Number(s.total) || computeSaleTotalFromItems(s.items);
-    tr.innerHTML = `<td>${time}</td><td>${s.id || '—'}</td><td>${itemsText}</td><td>${formatCurrency(totalVal)}</td>`;
-    recentTbody.appendChild(tr);
+  // ✅ Transaction History Table (Recent 5)
+  if (transactionTbody) {
+    const recentTransactions = Object.values(salesList)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5);
+
+    transactionTbody.innerHTML = '';
+    if (recentTransactions.length > 0) {
+      recentTransactions.forEach(tx => {
+        const itemsHTML = tx.items
+          ? tx.items.map(it => `${it.name} x${it.quantity}`).join('<br>')
+          : '—';
+
+        const row = `
+          <tr>
+            <td>${tx.txnID || '—'}</td>
+            <td>${new Date(tx.timestamp).toLocaleString()}</td>
+            <td>${itemsHTML}</td>
+            <td>${formatCurrency(tx.total || computeSaleTotalFromItems(tx.items))}</td>
+          </tr>`;
+        transactionTbody.innerHTML += row;
+      });
+    } else {
+      transactionTbody.innerHTML = `<tr><td colspan="4">No recent transactions</td></tr>`;
+    }
   }
 
   lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleString()}`;
 }
 
+// ---------- Utilities ----------
 function computeSaleTotalFromItems(items) {
   if (!Array.isArray(items)) return 0;
-  return items.reduce((acc,it) => acc + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)), 0);
+  return items.reduce((acc, it) =>
+    acc + (Number(it.price || 0) * Number(it.quantity || 1)), 0);
 }
 
-// ---------- Realtime listeners ----------
+// ---------- Realtime ----------
 function startRealtimeListeners() {
   const salesRef = ref(db, SALES_NODE);
 
-  // initial load: we also fetch existing data to avoid race conditions (optional)
   get(salesRef).then(snapshot => {
     const val = snapshot.val() || {};
     for (const id in val) {
       const s = val[id];
       s.id = s.id || id;
       s.timestamp = Number(s.timestamp) || Date.now();
+
+      // ✅ Ensure txnID exists
+      if (!s.txnID) {
+        s.txnID = generateOrderNumber();
+        update(ref(db, `${SALES_NODE}/${id}`), { txnID: s.txnID });
+      }
+
       salesList[id] = s;
     }
     recalcAggregatesAndRender();
-  }).catch(err => {
-    console.error('Initial fetch error', err);
   });
 
-  // child added
-  onChildAdded(salesRef, (snap) => {
-    const id = snap.key;
+  onChildAdded(salesRef, snap => {
     const s = snap.val();
-    s.id = s.id || id;
+    s.id = snap.key;
     s.timestamp = Number(s.timestamp) || Date.now();
-    salesList[id] = s;
+
+    // ✅ Ensure txnID exists
+    if (!s.txnID) {
+      s.txnID = generateOrderNumber();
+      update(ref(db, `${SALES_NODE}/${snap.key}`), { txnID: s.txnID });
+    }
+
+    salesList[snap.key] = s;
     recalcAggregatesAndRender();
   });
 
-  // child changed
-  onChildChanged(salesRef, (snap) => {
-    const id = snap.key;
+  onChildChanged(salesRef, snap => {
     const s = snap.val();
-    s.id = s.id || id;
+    s.id = snap.key;
     s.timestamp = Number(s.timestamp) || Date.now();
-    salesList[id] = s;
+    salesList[snap.key] = s;
     recalcAggregatesAndRender();
   });
 
-  // child removed
-  onChildRemoved(salesRef, (snap) => {
-    const id = snap.key;
-    delete salesList[id];
+  onChildRemoved(salesRef, snap => {
+    delete salesList[snap.key];
     recalcAggregatesAndRender();
   });
 }
 
 // ---------- Boot ----------
-function boot() {
+async function boot() {
+  await loadProductCategories();
   createCharts();
   startRealtimeListeners();
 }
 
 boot();
 
-// ---------- Optional: helper to simulate a sale (for local testing) ----------
-window.__simulateSale = function(sim) {
-  // sim: { id, timestamp, total, items: [{productId,name,category,price,quantity}] }
-  const k = sim.id || `test_${Date.now()}`;
-  const path = `${SALES_NODE}/${k}`;
-  const refPath = ref(db, path);
-  // write with compat API
-  ref(db, path).set(sim).then(()=>console.log('sim written')).catch(e=>console.error(e));
-};
+document.getElementById('salesPeriodSelect').addEventListener('change', (e) => {
+  currentPeriod = e.target.value;
+  recalcAggregatesAndRender();
+});
+
+async function loadProductCategories() {
+  const productsRef = ref(db, PRODUCTS_NODE);
+  try {
+    const snapshot = await get(productsRef);
+    const products = snapshot.val() || {};
+    for (const pid in products) {
+      const p = products[pid];
+      if (p.category) productCategoryMap[pid] = p.category;
+    }
+    console.log("✅ Product categories loaded:", productCategoryMap);
+  } catch (err) {
+    console.error("Error loading product categories:", err);
+  }
+}
