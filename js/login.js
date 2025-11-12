@@ -1,6 +1,6 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 
 const firebaseConfig = {
@@ -35,3 +35,20 @@ const auth = getAuth(app);
         alert("Error: " + error.message);
       });
   });
+
+   // ✅ Reset Password Function
+    resetBtn.addEventListener('click', async () => {
+      const email = document.getElementById('resetEmail').value.trim();
+      if (!email) {
+        alert("Please enter your email address.");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("Password reset link sent to: " + email);
+        resetPopup.style.display = 'none';
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });

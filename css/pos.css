@@ -1,8 +1,8 @@
-body{
-    margin: 0;
-    font-family: 'Russo One', sans-serif;
-    background-color: white;
-}
+ body {
+      font-family: "Poppins", sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+    }
 
 .container{
     display:flex;
@@ -10,16 +10,16 @@ body{
 }
 
 .container-1{
-    margin-top: 80px;
-    margin-left: 20px;
+    margin-left: 10px;
     width:62%;
-    height:470px;
+    height:495px;
     border-right: 1px solid gray;
     top: 0;
 }
 
 .products {
       flex: 2;
+      margin-right: 5px;
       padding-top: 10px;
       padding-bottom: 10px;
       overflow-y: auto;
@@ -87,14 +87,17 @@ body{
 
     .checkout {
       flex: 1;
-      padding: 90px 20px 0 20px;
+      margin-top: 20px;
+      padding: 0px 20px 0 20px;
       width:100%;
-      height:350px;
-      
+      height:230px;
+      overflow: auto;
     }
 
-    .checkout h2 {
+    .checkout h3 {
       margin-bottom: 15px;
+      position:sticky;
+      flex: 1;
     }
 
     #cart {
@@ -110,8 +113,15 @@ body{
 
     .total {
       font-weight: bold;
-      margin: 15px 0;
-      bottom: 0;
+      padding-left:10px;
+      padding-right:10px;
+      padding-bottom:10px;
+      padding-top: 5px;
+      background-color: #f4f6f9;
+    }
+
+    .total p{
+      padding-bottom: 1px;
     }
 
     button.remove-btn {
@@ -132,12 +142,19 @@ body{
 
 #checkoutBtn {
       width: 100%;
-      padding: 10px;
+      padding: 5px;
       font-size: 16px;
       background: #7ed957;
       border-radius: 8px;
       bottom: 0;
     }
+
+.end{
+  bottom: 0;
+  position: fixed;
+  width: 33%;
+  margin-bottom: 10px;
+}
     
      .orders { 
         margin-top: 20px; 
@@ -176,4 +193,27 @@ body{
   border-radius:6px;
   background:#7ed957;
   color:white;
+}
+
+input {
+      padding: 2px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      text-align: right;
+    }
+.amount {
+margin-bottom: 5px;
+font-size: 15px;
+}
+
+h4{
+  padding: 0;
+}
+label{
+  font-size: 12px;
+}
+
+.total p{
+  margin-top: 0px;
 }

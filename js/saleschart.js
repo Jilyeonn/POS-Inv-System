@@ -32,7 +32,6 @@ const totalTodayEl = document.getElementById('totalToday');
 const totalMonthEl = document.getElementById('totalMonth');
 const ordersTodayEl = document.getElementById('ordersToday');
 const avgTicketEl = document.getElementById('avgTicket');
-const recentTbody = document.querySelector('#recentTable tbody');
 const transactionTbody = document.querySelector('#transactionHistory tbody');
 
 // ---------- Chart instances ----------
@@ -40,7 +39,7 @@ let lineChart, barChart, pieChart;
 
 // ---------- Helpers ----------
 function formatCurrency(num) {
-  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(num);
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(num || 0);
 }
 
 function dateKey(ts) {
@@ -68,7 +67,7 @@ function generateOrderNumber() {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
-  const rand = Math.floor(1000 + Math.random() * 9000); // random 4 digits
+  const rand = Math.floor(1000 + Math.random() * 9000);
   return `ORD-${y}${m}${d}-${rand}`;
 }
 
@@ -143,10 +142,10 @@ function recalcAggregatesAndRender() {
 
     if (Array.isArray(sale.items)) {
       for (const it of sale.items) {
-        const pid = it.productId || it.id || it.product || `unknown-${it.name}`;
-        const name = it.name || it.productName || 'Unknown';
-        const qty = Number(it.quantity || it.qty || 1);
-        const price = Number(it.price || it.unitPrice || 0);
+        const pid = it.productId || it.id || `unknown-${it.name}`;
+        const name = it.name || 'Unknown';
+        const qty = Number(it.quantity || 1);
+        const price = Number(it.price || 0);
         const revenue = price * qty;
         if (!productTotals[pid]) productTotals[pid] = { name, revenue: 0, qty: 0 };
         productTotals[pid].revenue += revenue;
@@ -172,13 +171,12 @@ function recalcAggregatesAndRender() {
   ordersTodayEl.textContent = Object.values(salesList).filter(s => dateKey(s.timestamp) === todayKey).length;
   avgTicketEl.textContent = totalCount ? formatCurrency(totalAll / totalCount) : formatCurrency(0);
 
-  // Charts
+  // Charts update
   const days = buildDaysArray(currentPeriod === 'weekly' ? 7 : 30);
   const labels = days.map(d => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
   const dataPoints = days.map(d => salesByDay[d] || 0);
   lineChart.data.labels = labels;
   lineChart.data.datasets[0].data = dataPoints;
-  lineChart.data.datasets[0].label = `Sales (${currentPeriod})`;
   lineChart.update();
 
   const topProducts = Object.entries(productTotals)
@@ -193,7 +191,6 @@ function recalcAggregatesAndRender() {
   const labelsPie = categories.map(c => c[0]);
   const dataPie = categories.map(c => c[1]);
   const colors = labelsPie.map((_, i) => `hsl(${(i * 360 / labelsPie.length) % 360}, 70%, 60%)`);
-
   pieChart.data.labels = labelsPie;
   pieChart.data.datasets[0].data = dataPie;
   pieChart.data.datasets[0].backgroundColor = colors;
@@ -218,11 +215,13 @@ function recalcAggregatesAndRender() {
             <td>${new Date(tx.timestamp).toLocaleString()}</td>
             <td>${itemsHTML}</td>
             <td>${formatCurrency(tx.total || computeSaleTotalFromItems(tx.items))}</td>
+            <td>${formatCurrency(tx.cashGiven || 0)}</td>
+            <td>${formatCurrency(tx.change || 0)}</td>
           </tr>`;
         transactionTbody.innerHTML += row;
       });
     } else {
-      transactionTbody.innerHTML = `<tr><td colspan="4">No recent transactions</td></tr>`;
+      transactionTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No recent transactions</td></tr>`;
     }
   }
 
@@ -263,7 +262,6 @@ function startRealtimeListeners() {
     s.id = snap.key;
     s.timestamp = Number(s.timestamp) || Date.now();
 
-    // ✅ Ensure txnID exists
     if (!s.txnID) {
       s.txnID = generateOrderNumber();
       update(ref(db, `${SALES_NODE}/${snap.key}`), { txnID: s.txnID });

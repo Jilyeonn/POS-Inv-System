@@ -22,14 +22,11 @@
 
         <div class="homebody">
         <img src="img/wctext.png"> 
-        <h3> Log-in to start managing your sales and inventory.</h3>
-        <a class="login" href="#"> Log in </a>
         </div>
         <!-- End of Body of Home Page -->
         <!-- Log in form -->
         <div class="container" id="loginPopup">
             <div class="loginbody">
-            <span class="close-btn" id="closePopup">&times;</span>
             <form action="html/dashboard.html">
                 <div>
                 <label for="Email">Email</label>
@@ -43,42 +40,68 @@
                 <div>
                 <button type="submit" id="submit">Login</button>
                 </div>
+                <div class="forgot-link">
+          <a href="#" id="forgotPasswordLink">Forgot Password?</a>
+        </div>
             </form>
             </div>
     </div>
+     <!-- Reset Password Popup -->
+  <div class="reset-popup" id="resetPopup">
+    <div class="reset-content">
+      <span class="close-reset" id="closeReset">&times;</span>
+      <h3>Reset Password</h3>
+      <p style="font-size:14px; text-align:center;">Enter your email to reset your password</p>
+      <input type="email" id="resetEmail" placeholder="Enter your Email">
+      <button id="resetBtn">Send Reset Link</button>
+    </div>
+  </div>
+  </body>
 
     <script>
-        const loginLink = document.querySelector('.login');
-        const popup = document.getElementById('loginPopup');
-        const closeBtn = document.getElementById('closePopup');
-        const togglePassword = document.getElementById('togglePassword');
-        const passwordInput = document.getElementById('password');
+      const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    const resetPopup = document.getElementById('resetPopup');
+    const closeReset = document.getElementById('closeReset');
+    const resetBtn = document.getElementById('resetBtn');
 
-        loginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            popup.style.display = 'flex';
-        });
+    // Show/hide password
+    togglePassword.addEventListener('click', () => {
+      const isPassword = passwordInput.getAttribute('type') === 'password';
+      passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+      togglePassword.classList.toggle('fa-eye');
+      togglePassword.classList.toggle('fa-eye-slash');
+    });
 
-        closeBtn.addEventListener('click', () => {
-            popup.style.display = 'none';
-        });
+    // Show reset popup
+    forgotPasswordLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetPopup.style.display = 'flex';
+    });
 
-        window.addEventListener('click', (e) => {
-            if (e.target === popup) {
-                popup.style.display = 'none';
-            }
-        });
+    // Close reset popup
+    closeReset.addEventListener('click', () => {
+      resetPopup.style.display = 'none';
+    });
 
-        togglePassword.addEventListener('click', () => {
-            const isPassword = passwordInput.getAttribute('type') === 'password';
-            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
-            togglePassword.classList.toggle('fa-eye');
-            togglePassword.classList.toggle('fa-eye-slash');
-        });
+    // Close when clicking outside
+    window.addEventListener('click', (e) => {
+      if (e.target === resetPopup) {
+        resetPopup.style.display = 'none';
+      }
+    });
 
-        
-        
-        
+    // Handle reset password (temporary example)
+    resetBtn.addEventListener('click', () => {
+      const email = document.getElementById('resetEmail').value;
+      if (email.trim() === "") {
+        alert("Please enter your email address.");
+        return;
+      }
+      alert("A password reset link has been sent to " + email);
+      resetPopup.style.display = 'none';
+    });
     </script>
     </body>
 </html>

@@ -9,30 +9,54 @@
     </head>
     <body>
         <!--Start of Navigation Bar-->
-    <div class = "navbar">
-    <img src="../img/logo.png" id="nav-logo">
-        <p id="navtitle">VHT</p>
-        <p id="navtitle2">Naturals</p>
-        <ul class="nav-links">
-        <li><a href="dashboard.html">Dashboard</a></li>
+    <header>
+    <div class="logo">
+      <img src="../img/logo.png">
+      <h1>VHT Naturals</h1>
+    </div>
+
+    
+    <nav>
+      <ul id="nav-links">
+       <li> <a href="#">Dashboard ▾</a>
+          <div class="dropdown">
+            <a href="dashboard.html#sales">Sales</a>
+            <a href="dashboard.html#inventory">Inventory</a>
+            </div>
+          </li>
         <li><a href="pos.html">Point of Sales</a></li>
         <li><a href="inventory.html">Inventory</a></li>
-        <li><a href="/index.html">Log out</a></li>
-        </ul>
-        <div class="hamburger" id="hamburger">
-        <span></span>
-        <span></span>
-        <span></span>
-    </div>
-        </div>
+        <li><a href="receipthistory.html">Transaction History</a></li>
+        <li><a href="/index.html">Logout</a></li>
+      </ul>
+    </nav>
+
+    <button class="menu-toggle" id="menu-toggle">
+      <i data-lucide="menu"></i>
+    </button>
+
+  </header>
         <!-- End of Navigation Bar -->
         <!-- Body of Transaction History -->
 
-        <body>
-    <button id="downloadPDF">📄 Download PDF</button>
-    <div class="table-container">
-    <input type="text" id="searchInput" placeholder="Search by order ID or date...">
 
+    <div class="table-container">
+    
+      <div class="line">
+        <input type="text" id="searchInput" placeholder="Search by order ID or date...">
+    <div class="dates">
+  <label>Month:</label>
+  <select id="monthSelect"></select>
+
+  <label>Day:</label>
+  <select id="daySelect"></select>
+
+  <label>Year:</label>
+  <select id="yearSelect"></select>
+</div>
+        <button id="downloadPDF">Download PDF</button>
+  
+</div>
 
     <table id="transactionsTable">
       <thead>
@@ -41,6 +65,9 @@
           <th>Date</th>
           <th>Items</th>
           <th>Total</th>
+          <th>Cash</th>
+          <th>Change</th>
+          <th>Discount</th>
         </tr>
       </thead>
       <tbody id="transactionBody">
@@ -51,14 +78,93 @@
         </body>
 
 
-        <script>
-    const hamburger = document.getElementById("hamburger");
-    const navLinks = document.querySelector(".nav-links");
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  lucide.createIcons();
 
-    hamburger.addEventListener("click", () => {
-      navLinks.classList.toggle("active");
-      hamburger.classList.toggle("active"); 
+  function showWarningPopup() {
+  let popup = document.getElementById("inactivityWarning");
+  if (!popup) {
+    popup = document.createElement("div");
+    popup.id = "inactivityWarning";
+    popup.textContent = "⚠️ You have been inactive. Auto logout in 30 seconds...";
+    Object.assign(popup.style, {
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      background: "rgba(0,0,0,0.😎",
+      color: "white",
+      padding: "10px 15px",
+      borderRadius: "8px",
+      zIndex: "9999",
+      fontFamily: "sans-serif",
     });
+    document.body.appendChild(popup);
+  } else {
+    popup.style.display = "block";
+  }
+}
+
+function hideWarningPopup() {
+  const popup = document.getElementById("inactivityWarning");
+  if (popup) popup.style.display = "none";
+}
+
+function startInactivityTimers() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (warningTimer) clearTimeout(warningTimer);
+  hideWarningPopup();
+
+  warningTimer = setTimeout(showWarningPopup, AUTO_LOGOUT_MS - 30000);
+
+  inactivityTimer = setTimeout(async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!sessionStorage.getItem(AUTO_LOGOUT_DONE_KEY)) {
+      sessionStorage.setItem(AUTO_LOGOUT_DONE_KEY, "1");
+      await writeUserLog("auto logged out");
+    }
+
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("signOut error:", err);
+    }
+    sessionStorage.clear();
+    window.location.href = "/index.html";
+  }, AUTO_LOGOUT_MS);
+}
+
+function resetInactivityTimer() {
+  if (auth.currentUser) startInactivityTimers();
+}
+
+["mousemove", "keydown", "click", "scroll", "touchstart"].forEach((evt) =>
+  document.addEventListener(evt, resetInactivityTimer, { passive: true })
+);
+
+  const menuToggle = document.getElementById("menu-toggle");
+  const navLinks = document.getElementById("nav-links");
+
+  menuToggle.addEventListener("click", () => {
+    navLinks.classList.toggle("active");
+  });
+  function showPage(pageId) {
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(page => page.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    navLinks.classList.remove("active");
+  }
+
+  window.addEventListener("load", () => {
+    const hash = window.location.hash.substring(1); // remove #
+    if (hash === "sales" || hash === "inventory") {
+      showPage(hash);
+    } else {
+      showPage("sales");
+    }
+  });
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>

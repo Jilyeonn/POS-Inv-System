@@ -2,13 +2,23 @@
       font-family: "Poppins", sans-serif;
       background-color: #f4f6f9;
       margin: 0;
-      padding: 20px;
     }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+.line{
+  display: flex;
+  flex-direction: row;
+}
+
+.dates{
+  margin-bottom: 10px;
+  margin-left: 55px;
+  padding: 10px;
+  padding-bottom: 0;
+  background: #7ed957;
+  color: black;
+  border: none;
+  border-radius: 8px;
+}
 
     .table-container {
       background: white;
@@ -16,6 +26,7 @@
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       overflow-x: auto;
+      margin: 20px;
     }
     table {
       width: 100%;
@@ -23,7 +34,7 @@
     }
 
     th, td {
-      padding: 12px 16px;
+      padding: 10px 8px;
       text-align: center;
       border-bottom: 1px solid #ddd;
     }
@@ -31,7 +42,6 @@
     th {
       background-color: #7ed957;
       color: white;
-      position: sticky;
       top: 0;
       z-index: 2;
       align-items: center;
@@ -43,7 +53,7 @@
     }
 
     #searchInput {
-      width: 100%;
+      width: 55%;
       padding: 10px;
       margin-bottom: 15px;
       border-radius: 8px;
@@ -69,16 +79,17 @@
       display: inline-block;
       padding: 10px 18px;
       background: #7ed957;
-      color: white;
+      color: black;
       border: none;
       border-radius: 8px;
       font-size: 14px;
       cursor: pointer;
-      margin-bottom: 15px;
       transition: 0.2s;
-      margin-top: 60px;
+      margin-left: 35px;
+      margin-bottom: 10px;
     }
 
     #downloadPDF:hover {
       background: #45a049;
+      color:white;
     }

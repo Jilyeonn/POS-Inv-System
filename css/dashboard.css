@@ -1,11 +1,11 @@
-body{
-    margin: 0;
-    font-family: 'Russo One', sans-serif;
-    background-color: white;
-}
+ body {
+      font-family: "Poppins", sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+    }
 
 .container-1{
-    margin-top: 100px;
+    margin-top: 30px;
 }
 
 h1{

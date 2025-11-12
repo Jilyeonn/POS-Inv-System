@@ -20,32 +20,32 @@ const cartList = document.getElementById("cart");
 const totalEl = document.getElementById("total");
 const checkoutBtn = document.getElementById("checkoutBtn");
 const salesList = document.getElementById("salesList");
-
-// Receipt popup elements (add them in HTML)
 const receiptPopup = document.getElementById("receiptPopup");
 const receiptNumberEl = document.getElementById("receiptNumber");
 const receiptItemsEl = document.getElementById("receiptItems");
 const receiptTotalEl = document.getElementById("receiptTotal");
 
+// 🔹 NEW: Discount input fields
+const discountTypeEl = document.getElementById("discountType");
+const discountIdEl = document.getElementById("discountId");
+
 if (!productList || !cartList || !totalEl || !checkoutBtn) {
-  console.error("POS: required DOM elements are missing. Ensure product-list, cart, total, checkoutBtn exist.");
+  console.error("POS: required DOM elements are missing.");
 }
 
 let cart = {};
+let customerCash = 0;
 
+// ========== Helper ==========
 function formatCurrency(n) {
   return Number(n).toFixed(2);
 }
 
-// ======================= 🔹 SYNC INVENTORY → PRODUCTS 🔹 =======================
-// Whenever inventory changes (like from your resupply form), this listener
-// automatically updates the /products node so PoS instantly reflects new stock.
+// ========== Sync Inventory ==========
 onValue(ref(db, "inventory"), async (snapshot) => {
   if (!snapshot.exists()) return;
-
   const inventoryData = snapshot.val();
   for (const [id, item] of Object.entries(inventoryData)) {
-    // Sync each inventory item’s quantity and price to /products
     await update(ref(db, `products/${id}`), {
       name: item.name ?? item.item ?? "Unnamed",
       price: parseFloat(item.price ?? item.unitPrice ?? 0),
@@ -53,16 +53,12 @@ onValue(ref(db, "inventory"), async (snapshot) => {
       image: item.image ?? item.imageUrl ?? ""
     });
   }
-  console.log("✅ Synced latest inventory changes to products for POS display.");
 });
-// ==============================================================================
 
-
-// ======================= 🔹 LOAD PRODUCTS TO POS 🔹 ============================
+// ========== Load Products ==========
 function loadProducts() {
   onValue(ref(db, "products"), (snapshot) => {
     productList.innerHTML = "";
-
     if (!snapshot.exists()) {
       productList.innerHTML = "<p style='text-align:center; padding: 20px;'>No products available.</p>";
       return;
@@ -71,13 +67,11 @@ function loadProducts() {
     snapshot.forEach((childSnap) => {
       const product = childSnap.val();
       const id = childSnap.key;
-
       const price = parseFloat(product.price ?? product.unitPrice ?? 0);
       const qtyAvailable = Number(product.quantity ?? 0);
 
       const card = document.createElement("div");
       card.className = "product-card";
-
       card.innerHTML = `
         <div class="product-info">
           <h3>${escapeHtml(product.name ?? product.item ?? "Unnamed")}</h3>
@@ -97,12 +91,10 @@ function loadProducts() {
         await addToCartById(id);
       });
     });
-  }, (err) => {
-    console.error("Error loading products:", err);
   });
 }
-// ==============================================================================
 
+// ========== Escaping ==========
 function escapeHtml(s) {
   if (!s) return "";
   return String(s)
@@ -112,7 +104,7 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-// ======================= 🔹 ADD TO CART, RENDER CART, CHECKOUT 🔹 =======================
+// ========== Cart Logic ==========
 async function addToCartById(id) {
   try {
     const prodSnap = await get(ref(db, `products/${id}`));
@@ -131,20 +123,18 @@ async function addToCartById(id) {
     }
 
     if (!cart[id]) {
-      cart[id] = { id, name: product.name ?? product.item ?? "Unnamed", price, qty: 0, image: product.image || product.imageUrl || "" };
+      cart[id] = { id, name: product.name ?? product.item ?? "Unnamed", price, qty: 0, image: product.image || "" };
     }
     cart[id].qty++;
     renderCart();
   } catch (err) {
     console.error("Add to cart error:", err);
-    alert("Failed to add to cart.");
   }
 }
 
 function renderCart() {
   cartList.innerHTML = "";
   let total = 0;
-
   const ids = Object.keys(cart);
   if (ids.length === 0) {
     cartList.innerHTML = "<p style='text-align:center; color:#666;'>Cart is empty</p>";
@@ -160,12 +150,9 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;">
-        <div>
-          <div style="font-weight:600;">${escapeHtml(it.name)}</div>
-          <div style="font-size:0.9rem;color:#666;">₱${formatCurrency(it.price)} x ${it.qty} = ₱${formatCurrency(lineTotal)}</div>
-        </div>
-      </div>
+      <div style="flex:1;text-align:center;">${escapeHtml(it.name)}</div>
+      <div style="flex:1;text-align:center;">${it.qty}</div>
+      <div style="flex:1;text-align:center;">₱${formatCurrency(it.price * it.qty)}</div>
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="qtyBtn" data-id="${id}" data-delta="-1">−</button>
         <span>${it.qty}</span>
@@ -175,6 +162,8 @@ function renderCart() {
     `;
     cartList.appendChild(div);
   });
+
+  totalEl.textContent = formatCurrency(total);
 
   cartList.querySelectorAll(".qtyBtn").forEach(b => {
     b.onclick = async (e) => {
@@ -190,10 +179,101 @@ function renderCart() {
       renderCart();
     };
   });
-
-  totalEl.textContent = formatCurrency(total);
 }
 
+// ========== NEW: Live Discount + Change Auto-Update + ID Validation ==========
+function getCartTotal() {
+  return Object.values(cart).reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+
+function validateDiscountId(type, id) {
+  const digitsOnly = id.replace(/\D/g, "");
+  let valid = false;
+  let requiredLength = 0;
+
+  if (type === "Senior") {
+    requiredLength = 8;
+    valid = digitsOnly.length === requiredLength;
+  } else if (type === "PWD") {
+    requiredLength = 7;
+    valid = digitsOnly.length === requiredLength;
+  }
+
+  let errorEl = document.getElementById("discountError");
+  if (!errorEl) {
+    errorEl = document.createElement("div");
+    errorEl.id = "discountError";
+    errorEl.style.color = "red";
+    errorEl.style.fontSize = "13px";
+    errorEl.style.marginTop = "4px";
+    discountIdEl.insertAdjacentElement("afterend", errorEl);
+  }
+
+  if (!valid && (type === "Senior" || type === "PWD")) {
+    errorEl.textContent = `❌ ${type} ID must be exactly ${requiredLength} digits.`;
+  } else {
+    errorEl.textContent = "";
+  }
+
+  return valid;
+}
+
+function updateTotalWithDiscount() {
+  const total = getCartTotal();
+  const discountType = discountTypeEl?.value || "None";
+  const discountId = discountIdEl?.value?.trim() || "";
+  let discountRate = 0;
+  let isIdValid = true;
+
+  // 🔹 Validate ID before applying discount
+  if (discountType === "Senior" || discountType === "PWD") {
+    isIdValid = validateDiscountId(discountType, discountId);
+    if (isIdValid) {
+      discountRate = 0.20; // 20% off only if ID format is valid
+    }
+  } else {
+    // If no discount selected, remove any error
+    const errorEl = document.getElementById("discountError");
+    if (errorEl) errorEl.textContent = "";
+  }
+
+  const discountedTotal = total - total * discountRate;
+  totalEl.textContent = formatCurrency(discountedTotal);
+
+
+const cashInput = document.getElementById("cashInput");
+const changeAmountEl = document.getElementById("changeAmount");
+
+
+if (cashInput && !cashInput.dataset.changeListenerAttached) {
+  cashInput.dataset.changeListenerAttached = "true";
+  cashInput.addEventListener("input", () => {
+    customerCash = parseFloat(cashInput.value) || 0;
+    updateTotalWithDiscount();
+  });
+}
+
+if (cashInput && changeAmountEl) {
+  const cash = parseFloat(cashInput.value) || 0;
+  const change = cash - discountedTotal;
+  changeAmountEl.textContent = formatCurrency(change >= 0 ? change : 0);
+}
+}
+
+// 🔹 Ensure discount and change reapply whenever cart changes
+const originalRenderCart = renderCart;
+renderCart = function() {
+  originalRenderCart();
+  updateTotalWithDiscount();
+};
+
+// 🔹 Update totals and validation when discount fields change
+if (discountTypeEl && discountIdEl) {
+  discountTypeEl.addEventListener("change", updateTotalWithDiscount);
+  discountIdEl.addEventListener("input", updateTotalWithDiscount);
+}
+
+// ========== Change Quantity ==========
 async function changeQuantity(id, delta) {
   if (!cart[id]) return;
   try {
@@ -214,20 +294,30 @@ async function changeQuantity(id, delta) {
     renderCart();
   } catch (err) {
     console.error("changeQuantity error:", err);
-    alert("Failed to change quantity.");
   }
 }
 
-window.removeFromCart = function (id) {
-  delete cart[id];
-  renderCart();
-};
-
-// 🔹 Checkout (with e-receipt)
+// ========== Checkout ==========
 checkoutBtn.addEventListener("click", async () => {
   const items = Object.values(cart);
   if (items.length === 0) {
     alert("Cart is empty!");
+    return;
+  }
+
+  const total = Object.values(cart).reduce((sum, it) => sum + it.price * it.qty, 0);
+  const discountType = discountTypeEl?.value || "None";
+  const discountId = discountIdEl?.value?.trim() || "";
+  let discountRate = 0;
+
+  if ((discountType === "Senior" || discountType === "PWD") && discountId !== "") {
+    discountRate = 0.20; // 20% off
+  }
+
+  const discountedTotal = total - total * discountRate;
+
+  if (customerCash < discountedTotal) {
+    alert("Not enough cash given!");
     return;
   }
 
@@ -238,25 +328,36 @@ checkoutBtn.addEventListener("click", async () => {
     for (const item of items) {
       const productSnap = await get(ref(db, `products/${item.id}/quantity`));
       const available = productSnap.exists() ? productSnap.val() : 0;
-      if (available < item.qty) {
-        throw new Error(`Not enough stock for ${item.name}. Available: ${available}`);
-      }
+      if (available < item.qty) throw new Error(`Not enough stock for ${item.name}.`);
     }
 
     for (const item of items) {
       const productQtyRef = ref(db, `products/${item.id}/quantity`);
       const inventoryQtyRef = ref(db, `inventory/${item.id}/quantity`);
-      await runTransaction(productQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
-      await runTransaction(inventoryQtyRef, (currentQty) => Math.max((currentQty ?? 0) - item.qty, 0));
+      await runTransaction(productQtyRef, (q) => Math.max((q ?? 0) - item.qty, 0));
+      await runTransaction(inventoryQtyRef, (q) => Math.max((q ?? 0) - item.qty, 0));
     }
 
-      // 🔸 Save sale record
-    const total = parseFloat(totalEl.textContent);
+    // 🔹 VAT-Inclusive Calculation
+    const vatRate = 0.12;
+    const vatAmount = discountedTotal * (vatRate / (1 + vatRate));
+    const netOfVAT = discountedTotal - vatAmount;
+
     const orderNumber = generateOrderNumber();
     const saleData = {
       id: `sale_${Date.now()}`,
       orderNumber,
-      total,
+      total: discountedTotal,
+      vatInclusive: true,
+      vatRate: vatRate * 100,
+      vatAmount,
+      netOfVAT,
+      discountType,
+      discountId,
+      discountRate: discountRate * 100,
+      originalTotal: total,
+      cashGiven: customerCash,
+      change: customerCash - discountedTotal,
       timestamp: Date.now(),
       items: items.map(it => ({
         productId: it.id,
@@ -266,12 +367,11 @@ checkoutBtn.addEventListener("click", async () => {
       })),
     };
 
-
     await push(ref(db, "sales"), saleData);
     showReceipt(saleData);
     cart = {};
+    customerCash = 0;
     renderCart();
-
   } catch (error) {
     console.error("Checkout error:", error);
     alert(error.message || "Checkout failed.");
@@ -281,7 +381,7 @@ checkoutBtn.addEventListener("click", async () => {
   }
 });
 
-// ======================= 🔹 E-RECEIPT POPUP 🔹 =======================
+// ========== Receipt ==========
 function generateOrderNumber() {
   const d = new Date();
   return `ORD-${d.getFullYear().toString().slice(-2)}${(d.getMonth()+1)
@@ -290,22 +390,44 @@ function generateOrderNumber() {
 
 function showReceipt(order) {
   if (!receiptPopup) return;
-  const rows = order.items.map(
-    (i) =>
-      `<tr><td>${i.name}</td><td>${i.quantity}</td><td>₱${formatCurrency(i.price)}</td></tr>`
-  ).join("");
+
+  const rows = order.items
+    .map(
+      (i) =>
+        `<tr>
+          <td style="text-align:center;">${i.name}</td>
+          <td style="text-align:center;">${i.quantity}</td>
+          <td style="text-align:center;">₱${formatCurrency(i.price)}</td>
+        </tr>`
+    )
+    .join("");
 
   receiptNumberEl.textContent = order.orderNumber;
-  receiptItemsEl.innerHTML = rows;
-  receiptTotalEl.textContent = formatCurrency(order.total);
+  receiptItemsEl.innerHTML = `
+  ${rows}
+    <tr><td colspan="2" style="text-align:right;font-weight:600;">Subtotal (Net of VAT):</td>
+        <td style="text-align:center;">₱${formatCurrency(order.netOfVAT)}</td></tr>
+    <tr><td colspan="2" style="text-align:right;">VAT(${order.vatRate}%):</td>
+        <td style="text-align:center;">₱${formatCurrency(order.vatAmount)}</td></tr>
+    <tr><td colspan="2" style="text-align:right;">Discount (${order.discountType}):</td>
+        <td style="text-align:center;">${order.discountRate > 0 ? `-${order.discountRate}%` : "None"}</td></tr>
+    <tr><td colspan="2" style="text-align:right;">ID Number:</td>
+        <td style="text-align:center;">${order.discountId || "N/A"}</td></tr>
+    <tr><td colspan="2" style="text-align:right;">Cash Given:</td>
+        <td style="text-align:center;">₱${formatCurrency(order.cashGiven)}</td></tr>
+    <tr><td colspan="2" style="text-align:right;">Change:</td>
+        <td style="text-align:center;">₱${formatCurrency(order.change)}</td></tr>
+  `;
 
+  receiptTotalEl.textContent = formatCurrency(order.total);
   receiptPopup.style.display = "flex";
 }
 
 window.closeReceipt = function () {
   if (receiptPopup) receiptPopup.style.display = "none";
 };
-// ======================= 🔹 LIVE SALES LIST 🔹 =======================
+
+// ========== Live Sales ==========
 if (salesList) {
   onValue(ref(db, "sales"), (snapshot) => {
     salesList.innerHTML = "";
@@ -316,7 +438,7 @@ if (salesList) {
     });
     entries.reverse().forEach(entry => {
       const s = entry.val;
-      const date = new Date(s.createdAt ?? Date.now()).toLocaleString();
+      const date = new Date(s.timestamp ?? Date.now()).toLocaleString();
       const div = document.createElement("div");
       div.className = "sale-entry";
       div.innerHTML = `<strong>₱${formatCurrency(s.total ?? 0)}</strong><br><small>${date}</small>`;
