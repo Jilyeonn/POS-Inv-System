@@ -2,6 +2,7 @@
       font-family: "Poppins", sans-serif;
       background-color: #f4f6f9;
       margin: 0;
+      margin-bottom: 0;
     }
 
 .topbar {
@@ -26,7 +27,7 @@
 .container {
   padding: 22px;
   max-width: 1200px;
-  margin: 18px auto;
+  
 }
 
 .cards {

@@ -25,6 +25,7 @@ const receiptNumberEl = document.getElementById("receiptNumber");
 const receiptItemsEl = document.getElementById("receiptItems");
 const receiptTotalEl = document.getElementById("receiptTotal");
 
+
 // 🔹 NEW: Discount input fields
 const discountTypeEl = document.getElementById("discountType");
 const discountIdEl = document.getElementById("discountId");
@@ -55,42 +56,119 @@ onValue(ref(db, "inventory"), async (snapshot) => {
   }
 });
 
-// ========== Load Products ==========
+const categoryFilter = document.getElementById("categoryFilter");
+const searchBar = document.getElementById("searchBar");
+
+// ================== Load Categories (Auto From DB) ==================
+function loadCategories() {
+  onValue(ref(db, "products"), (snapshot) => {
+    if (!snapshot.exists()) return;
+
+    const categories = new Set();
+    snapshot.forEach(child => {
+      const p = child.val();
+      if (p.category) categories.add(p.category);
+    });
+
+    categoryFilter.innerHTML = `<option value="All">All Categories</option>`;
+    categories.forEach(cat => {
+      categoryFilter.innerHTML += `<option value="${cat}">${cat}</option>`;
+    });
+  });
+}
+// ================== Load Products ==================
 function loadProducts() {
   onValue(ref(db, "products"), (snapshot) => {
-    productList.innerHTML = "";
-    if (!snapshot.exists()) {
-      productList.innerHTML = "<p style='text-align:center; padding: 20px;'>No products available.</p>";
-      return;
+    const products = snapshot.exists() ? snapshot.val() : {};
+
+    // 🔹 Collect categories from product list
+    const categories = new Set(["All"]);
+    Object.values(products).forEach(p => {
+      if (p.category) categories.add(p.category);
+    });
+
+    // 🔹 Populate category dropdown (only once)
+    if (categoryFilter && categoryFilter.options.length <= 1) {
+      categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryFilter.appendChild(opt);
+      });
     }
 
-    snapshot.forEach((childSnap) => {
-      const product = childSnap.val();
-      const id = childSnap.key;
-      const price = parseFloat(product.price ?? product.unitPrice ?? 0);
-      const qtyAvailable = Number(product.quantity ?? 0);
+    // 🔹 Render the product list
+    const render = () => {
+      const selectedCategory = categoryFilter.value;
+      const searchQuery = searchBar.value.toLowerCase();
 
-      const card = document.createElement("div");
-      card.className = "product-card";
-      card.innerHTML = `
-        <div class="product-info">
-          <h3>${escapeHtml(product.name ?? product.item ?? "Unnamed")}</h3>
-          <p>₱${formatCurrency(price)}</p>
-          <small>Stock: ${qtyAvailable}</small>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:center;padding-top:8px;">
-          <button class="addBtn" data-id="${id}" data-price="${price}" ${qtyAvailable <= 0 ? "disabled" : ""}>Add to cart</button>
-        </div>
-      `;
-      productList.appendChild(card);
-    });
+      productList.innerHTML = "";
 
-    document.querySelectorAll(".addBtn").forEach((b) => {
-      b.addEventListener("click", async (e) => {
-        const id = b.dataset.id;
-        await addToCartById(id);
+      const entries = Object.entries(products);
+      if (entries.length === 0) {
+        productList.innerHTML =
+          "<p style='text-align:center; padding: 20px;'>No products available.</p>";
+        return;
+      }
+
+      entries.forEach(([id, product]) => {
+        const price = parseFloat(product.price ?? 0);
+        const qtyAvailable = Number(product.quantity ?? 0);
+        const name = (product.name ?? product.item ?? "Unnamed").toLowerCase();
+        const category = product.category ?? "Uncategorized";
+
+        // 🔹 Category filter
+        if (selectedCategory !== "All" && category !== selectedCategory) return;
+
+        // 🔹 Search filter
+        if (!name.includes(searchQuery)) return;
+
+        const card = document.createElement("div");
+        card.className = "product-card";
+        card.innerHTML = `
+          
+          <div class="product-info">
+            <h3>${escapeHtml(product.name ?? "Unnamed")}</h3>
+            <div class="product-image" style="text-align:center; margin-bottom:8px;">
+  ${
+    product.image
+      ? `<img src="${product.image}" alt="${escapeHtml(product.name)}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;align-items:center;justify-content:center;">`
+      : `<div style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;border-radius:8px;font-size:12px;">No Image</div>`
+  }
+</div>
+            <p>₱${formatCurrency(price)}</p>
+            <small>Category: ${category}</small><br>
+            <small>Stock: ${qtyAvailable}</small>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;padding-top:8px;">
+            <button class="addBtn" data-id="${id}" data-price="${price}" ${
+          qtyAvailable <= 0 ? "disabled" : ""
+        }>Add to cart</button>
+          </div>
+        `;
+
+        productList.appendChild(card);
       });
-    });
+
+      // 🔹 Re-bind add-to-cart buttons
+      document.querySelectorAll(".addBtn").forEach((b) => {
+        b.addEventListener("click", async () => {
+          await addToCartById(b.dataset.id);
+        });
+      });
+    };
+
+    render(); // initial load
+
+    // 🔹 Live search & category filter
+    searchBar.oninput = render;
+    categoryFilter.onchange = render;
+  });
+}
+
+if (categoryFilter) {
+  categoryFilter.addEventListener("change", () => {
+    loadProducts();
   });
 }
 
@@ -103,6 +181,8 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+
 
 // ========== Cart Logic ==========
 async function addToCartById(id) {
@@ -132,6 +212,7 @@ async function addToCartById(id) {
   }
 }
 
+// ================== Render Cart ==================
 function renderCart() {
   cartList.innerHTML = "";
   let total = 0;
@@ -150,9 +231,19 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML = `
-      <div style="flex:1;text-align:center;">${escapeHtml(it.name)}</div>
-      <div style="flex:1;text-align:center;">${it.qty}</div>
-      <div style="flex:1;text-align:center;">₱${formatCurrency(it.price * it.qty)}</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div>
+          <div style="font-weight:450;">${escapeHtml(it.name)}</div>
+          <div style="width:50px;height:50px;">
+          ${
+            it.image
+              ? `<img src="${it.image}" alt="${escapeHtml(it.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">`
+              : `<div style="width:100%;height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;border-radius:4px;">No Image</div>`
+          }
+        </div>
+          <div style="font-size:13px;color:#666;">₱${formatCurrency(it.price)} x ${it.qty} = ₱${formatCurrency(lineTotal)}</div>
+        </div>
+      </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="qtyBtn" data-id="${id}" data-delta="-1">−</button>
         <span>${it.qty}</span>
@@ -199,21 +290,23 @@ function validateDiscountId(type, id) {
     valid = digitsOnly.length === requiredLength;
   }
 
-  let errorEl = document.getElementById("discountError");
-  if (!errorEl) {
-    errorEl = document.createElement("div");
-    errorEl.id = "discountError";
-    errorEl.style.color = "red";
-    errorEl.style.fontSize = "13px";
-    errorEl.style.marginTop = "4px";
-    discountIdEl.insertAdjacentElement("afterend", errorEl);
-  }
+  let container = document.querySelector(".discount-id-container");
 
-  if (!valid && (type === "Senior" || type === "PWD")) {
-    errorEl.textContent = `❌ ${type} ID must be exactly ${requiredLength} digits.`;
-  } else {
-    errorEl.textContent = "";
-  }
+let errorEl = document.getElementById("discountError");
+if (!errorEl) {
+  errorEl = document.createElement("div");
+  errorEl.id = "discountError";
+  errorEl.style.color = "red";
+  errorEl.style.fontSize = "13px";
+
+  container.insertAdjacentElement("afterend", errorEl);
+}
+
+if (!valid && (type === "Senior" || type === "PWD")) {
+  errorEl.textContent = `❌ ${type} ID must be exactly ${requiredLength} digits.`;
+} else {
+  errorEl.textContent = "";
+}
 
   return valid;
 }
@@ -447,5 +540,6 @@ if (salesList) {
   });
 }
 
+loadCategories();
 loadProducts();
 renderCart();

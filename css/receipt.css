@@ -4,14 +4,35 @@
       margin: 0;
     }
 
+/* Default expanded sidebar */
+body .container {
+  margin-left: 220px;
+  transition: margin-left 0.3s ease;
+}
+
+
+body.collapsed .container {
+  margin-left: 100px;
+}
+
+body.collapsed .container {
+  width: 100%;
+}
+
+.container{
+  width: 80%;
+  
+}
 .line{
+  padding: 20px;
+  padding-bottom: 10px;
   display: flex;
   flex-direction: row;
 }
 
 .dates{
-  margin-bottom: 10px;
-  margin-left: 55px;
+  margin-bottom: 15px;
+  margin-left: 50px;
   padding: 10px;
   padding-bottom: 0;
   background: #7ed957;
@@ -21,12 +42,14 @@
 }
 
     .table-container {
+      display: flex;
       background: white;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       overflow-x: auto;
-      margin: 20px;
+      margin-right: 20px;
+      height:100%;
     }
     table {
       width: 100%;
@@ -37,6 +60,7 @@
       padding: 10px 8px;
       text-align: center;
       border-bottom: 1px solid #ddd;
+      
     }
 
     th {
@@ -46,6 +70,7 @@
       z-index: 2;
       align-items: center;
       justify-content: center;
+      display: sticky;
     }
 
     tr:hover {
@@ -53,7 +78,7 @@
     }
 
     #searchInput {
-      width: 55%;
+      width: 45%;
       padding: 10px;
       margin-bottom: 15px;
       border-radius: 8px;
@@ -86,7 +111,7 @@
       cursor: pointer;
       transition: 0.2s;
       margin-left: 35px;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
 
     #downloadPDF:hover {

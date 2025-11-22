@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- DASHBOARD ELEMENTS ---
   const totalItemsEl = document.getElementById("totalItems");
   const totalQtyEl = document.getElementById("totalQty");
-  const totalValueEl = document.getElementById("totalValue");
+  const totalValueEl = document.getElementById("totalValue"); // ← DISPLAY FOR TOTAL VALUE
   const lowStockEl = document.getElementById("lowStock");
 
   const pie1El = document.getElementById("pieChart1");
@@ -82,55 +82,60 @@ document.addEventListener("DOMContentLoaded", () => {
     options: { responsive: true }
   });
 
-  // --- Inventory listener ---
-  const inventoryRef = ref(db, "inventory");
-  onValue(inventoryRef, (snapshot) => {
-    const data = snapshot.val() || {};
+  // --- Inventory Listener ---
+const inventoryRef = ref(db, "inventory");
+onValue(inventoryRef, (snapshot) => {
+  const data = snapshot.val() || {};
 
-    const supplyLabels = [];
-    const supplyQuantities = [];
-    const categoryTotals = {};
-    let totalItems = 0;
-    let totalQty = 0;
-    let totalValue = 0;
-    let lowStock = 0;
+  const supplyLabels = [];
+  const supplyQuantities = [];
+  const categoryTotals = {};
+  let totalItems = 0;
+  let totalQty = 0;
+  let totalValue = 0;
+  let lowStock = 0;
 
-    Object.values(data).forEach((item) => {
-      const name = item.item ?? item.name ?? "Unknown";
-      const qty = Number(item.quantity ?? item.qty ?? 0) || 0;
-      const price = Number(item.price ?? 0);
-      const cat = item.category ?? "Uncategorized";
+  Object.values(data).forEach((item) => {
+    const name = item.item ?? item.name ?? "Unknown";
+    const qty = Number(item.quantity ?? item.qty ?? 0) || 0;
 
-      supplyLabels.push(name);
-      supplyQuantities.push(qty);
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + qty;
+    // 👇 Correct price mapping (your DB uses unitPrice)
+    const price = Number(item.unitPrice ?? item.price ?? item.unit_price ?? 0);
 
-      totalItems++;
-      totalQty += qty;
-      totalValue += qty * price;
-      if (qty < 10) lowStock++; // low stock threshold
-    });
+    const cat = item.category ?? "Uncategorized";
 
-    // --- Update overview cards ---
-    totalItemsEl.textContent = totalItems.toLocaleString();
-    totalQtyEl.textContent = totalQty.toLocaleString();
-    totalValueEl.textContent = "₱" + totalValue.toLocaleString();
-    lowStockEl.textContent = lowStock.toLocaleString();
+    supplyLabels.push(name);
+    supplyQuantities.push(qty);
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + qty;
 
-    // --- Update pie1 (items) ---
-    pie1.data.labels = supplyLabels;
-    pie1.data.datasets[0].data = supplyQuantities;
-    pie1.data.datasets[0].backgroundColor = supplyLabels.map((_, i) => colorForIndex(i, supplyLabels.length));
-    pie1.update();
-
-    // --- Update pie2 (categories) ---
-    const catLabels = Object.keys(categoryTotals);
-    const catValues = Object.values(categoryTotals);
-    pie2.data.labels = catLabels;
-    pie2.data.datasets[0].data = catValues;
-    pie2.data.datasets[0].backgroundColor = catLabels.map((_, i) => colorForIndex(i, catLabels.length));
-    pie2.update();
+    totalItems++;
+    totalQty += qty;
+    totalValue += qty * price;
+    if (qty < 10) lowStock++;
   });
+
+  // --- Update dashboard cards ---
+  totalItemsEl.textContent = totalItems.toLocaleString();
+  totalQtyEl.textContent = totalQty.toLocaleString();
+  totalValueEl.textContent = "₱" + totalValue.toLocaleString();
+  lowStockEl.textContent = lowStock.toLocaleString();
+
+  // Pie 1 — Items
+  pie1.data.labels = supplyLabels;
+  pie1.data.datasets[0].data = supplyQuantities;
+  pie1.data.datasets[0].backgroundColor =
+    supplyLabels.map((_, i) => colorForIndex(i, supplyLabels.length));
+  pie1.update();
+
+  // Pie 2 — Categories
+  const catLabels = Object.keys(categoryTotals);
+  const catValues = Object.values(categoryTotals);
+  pie2.data.labels = catLabels;
+  pie2.data.datasets[0].data = catValues;
+  pie2.data.datasets[0].backgroundColor =
+    catLabels.map((_, i) => colorForIndex(i, catLabels.length));
+  pie2.update();
+});
 
   // --- Resupplies for line chart ---
   const resuppliesRef = ref(db, "resupplies");
@@ -161,3 +166,5 @@ document.addEventListener("DOMContentLoaded", () => {
     line.update();
   });
 });
+
+

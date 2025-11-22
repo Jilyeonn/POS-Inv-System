@@ -1,31 +1,23 @@
 body{
-    margin: 0;
     font-family: 'Russo One', sans-serif;
     background-color: white;
+    margin: 0;
+    
 }
 
-.container{
-    display:flex;
-    flex-direction: row;
+/* Default expanded sidebar */
+body .main-content {
+  margin-left: 200px;
+  transition: margin-left 0.3s ease;
 }
 
-.container-1{
-    margin-top: 90px;
-    margin-left: 70px;
-    border:gray solid;
-    border-width: 1px;
-    width:60%;
-    height:450px;
+/* When collapsed */
+body.collapsed .main-content {
+  margin-left: 100px;
 }
 
-.container-2{
-    margin-top: 90px;
-    margin-left: 55px;
-    margin-right: 55px;
-    border:gray solid;
-    border-width: 1px;
-    width:35%;
-    height:450px;
+#archivePopup{
+  display:none;
 }
 
 #searchItemInput{
@@ -40,9 +32,12 @@ body{
 
 .inventory-table {
   margin-top: 30px;
-  margin-right: 50px;
-  margin-left: 50px;
+  margin-right: 20px;
+  margin-left: 15px;
+  width: 100%;
   overflow-x: auto;
+  overflow-y: auto;
+  
 }
 
 table {
@@ -69,6 +64,10 @@ tr:nth-child(even) {
 #addItemBtn{
   margin-left: 50px;
   font: black;
+}
+
+.inventory-table, #addItemBtn, .btn {
+  transition: margin-left 0.3s ease;
 }
 
 .btn {
@@ -274,6 +273,26 @@ tr:nth-child(even) {
 }
 
 .popup .cancel-btn:hover {
+  background: #c82333;
+}
+
+/* Save button */
+.save-btn {
+  background: #28a745;
+  color: #fff;
+}
+
+.save-btn:hover {
+  background: #218838;
+}
+
+/* Cancel button */
+ .cancel-btn {
+  background: #dc3545;
+  color: #fff;
+}
+
+.cancel-btn:hover {
   background: #c82333;
 }
 

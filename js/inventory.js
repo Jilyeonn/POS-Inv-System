@@ -14,20 +14,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+
 document.addEventListener("DOMContentLoaded", () => {
   const resupplyBtn = document.getElementById("resupplyBtn");
-
   const inventoryRef = ref(db, "inventory");
+  const newItemRef = push(ref(db, "inventory"));
+  const autoCode = "ITEM-" + newItemRef.key.substring(0, 6).toUpperCase();
   const resuppliesRef = ref(db, "resupplies");
   const productsRef = ref(db, "products");
+  const tbody = document.querySelector("#inventoryTable tbody");
+  if (!tbody) console.error("tbody not found: check selector #inventoryTable tbody");
+  const addBtn = document.getElementById("addBtn") || document.getElementById("addItemBtn");
+  if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBtn");
 
-const tbody = document.querySelector("#inventoryTable tbody");
-if (!tbody) console.error("tbody not found: check selector #inventoryTable tbody");
-const addBtn = document.getElementById("addBtn") || document.getElementById("addItemBtn");
-if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBtn");
-
-// Start of Add Item Popup Form //
-  // ================== 🔹 ADD ITEM POPUP FORM ================== //
+  // ADD ITEM POPUP 
   const addPopupOverlay = document.createElement("div");
   addPopupOverlay.classList.add("popup-overlay");
   addPopupOverlay.id = "addPopup";
@@ -37,12 +37,16 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
     <div class="popup">
       <h2>Add New Item</h2>
       <form id="addItemForm">
-        <input type="text" id="newCode" placeholder="Item Code" required>
+
         <input type="text" id="newItem" placeholder="Product Name" required>
         <input type="text" id="newCategory" placeholder="Category" required>
         <input type="number" id="newQuantity" placeholder="Quantity" required>
         <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
         <input type="date" id="newExpiry" required>
+
+        <!-- Image field -->
+        <label style="margin-top:10px;">Product Image</label>
+        <input type="file" id="newImage" accept="image/*">
 
         <div class="popup-buttons">
           <button type="button" id="cancelAdd" class="cancel-btn">Cancel</button>
@@ -56,12 +60,14 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
   const addItemForm = addPopupOverlay.querySelector("#addItemForm");
   const cancelAdd = addPopupOverlay.querySelector("#cancelAdd");
 
-  addBtn.addEventListener("click", () => {
-    addPopupOverlay.style.display = "flex";
-    addItemForm.reset();
+  addBtn?.addEventListener("click", () => {
+    if (addPopupOverlay) {
+      addPopupOverlay.style.display = "flex";
+      addItemForm?.reset();
+    }
   });
 
-  cancelAdd.addEventListener("click", () => {
+  cancelAdd?.addEventListener("click", () => {
     addPopupOverlay.style.display = "none";
     addItemForm.reset();
   });
@@ -70,34 +76,45 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
     if (e.target === addPopupOverlay) addPopupOverlay.style.display = "none";
   });
 
-  // ================== 🔹 ADD ITEM HANDLER ================== //
-  addItemForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+//  ADD ITEM (NOT POPUP ONLY PROCESS)
+addItemForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const itemCode = addItemForm.querySelector("#newCode").value.trim();
-    const item = addItemForm.querySelector("#newItem").value.trim();
-    const category = addItemForm.querySelector("#newCategory").value.trim();
-    const quantity = Number(addItemForm.querySelector("#newQuantity").value);
-    const unitPrice = Number(addItemForm.querySelector("#newPrice").value);
-    const expiry = addItemForm.querySelector("#newExpiry").value;
+  const item = addItemForm.querySelector("#newItem").value.trim();
+  const category = addItemForm.querySelector("#newCategory").value.trim();
+  const quantity = Number(addItemForm.querySelector("#newQuantity").value);
+  const unitPrice = Number(addItemForm.querySelector("#newPrice").value);
+  const expiry = addItemForm.querySelector("#newExpiry").value;
+  const file = addItemForm.querySelector("#newImage").files[0];
 
-    if (/\d/.test(category)) {
-      alert("Category cannot contain numbers.");
-      return;
-    }
-    if (!itemCode || !item || isNaN(quantity) || isNaN(unitPrice)) {
-      alert("Please fill all fields correctly.");
-      return;
-    }
+  if (!item || !category || isNaN(quantity) || isNaN(unitPrice)) {
+    alert("Please fill all fields correctly.");
+    return;
+  }
 
-    let stockStatus = "In Stock";
-    if (quantity === 0) stockStatus = "No Stock";
-    else if (quantity <= 10) stockStatus = "Low Stock";
+  let stockStatus = quantity === 0 ? "No Stock" : quantity <= 10 ? "Low Stock" : "In Stock";
+  const totalValue = quantity * unitPrice;
 
-    const totalValue = quantity * unitPrice;
+  let imageData = "";
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      imageData = reader.result;
 
-    try {
+      const snap = await get(inventoryRef);
+      let nextCode = 1000;
+      if (snap.exists()) {
+        let maxCode = 1000;
+        snap.forEach((child) => {
+          const code = Number(child.val().itemCode);
+          if (!isNaN(code) && code > maxCode) maxCode = code;
+        });
+        nextCode = maxCode + 1;
+      }
+
+      const itemCode = nextCode;
       const newRef = push(inventoryRef);
+
       await set(newRef, {
         itemCode,
         item,
@@ -106,7 +123,8 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
         stockStatus,
         unitPrice,
         totalValue,
-        expiry
+        expiry,
+        imageUrl: imageData 
       });
 
       await set(ref(db, `products/${newRef.key}`), {
@@ -114,85 +132,177 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
         price: unitPrice,
         quantity,
         category,
-        itemCode
+        itemCode,
+        imageUrl: imageData
       });
 
-      alert("Item added and synced to PoS!");
+      alert("Item added successfully!");
       addPopupOverlay.style.display = "none";
       addItemForm.reset();
+    };
+    reader.readAsDataURL(file);
+  } else {
 
-    } catch (err) {
-      console.error("Add failed:", err);
-      alert("Failed to add item. Check Firebase config/console.");
-    }
-  });
-
-  // ================== 🔹 LOAD INVENTORY TABLE + STOCK ALERTS ================== //
-  onValue(inventoryRef, (snapshot) => {
-    tbody.innerHTML = "";
-
-    if (!snapshot.exists()) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="9" style="text-align:center;">No inventory items</td>`;
-      tbody.appendChild(tr);
-      return;
+    const snap = await get(inventoryRef);
+    let nextCode = 1000;
+    if (snap.exists()) {
+      let maxCode = 1000;
+      snap.forEach((child) => {
+        const code = Number(child.val().itemCode);
+        if (!isNaN(code) && code > maxCode) maxCode = code;
+      });
+      nextCode = maxCode + 1;
     }
 
-    snapshot.forEach((childSnap) => {
-      const data = childSnap.val();
-      const id = childSnap.key;
-      const itemCode = data.itemCode ?? "";
-      const item = data.item ?? "";
-      const category = data.category ?? "";
-      const quantity = Number(data.quantity ?? 0);
-      const expiry = data.expiry ?? "";
-      const unitPrice =
-        typeof data.unitPrice !== "undefined"
-          ? Number(data.unitPrice)
-          : typeof data.price !== "undefined"
-          ? Number(data.price)
-          : 0;
+    const itemCode = nextCode;
+    const newRef = push(inventoryRef);
 
-      // 🔹 STOCK STATUS CONDITIONS WITH ALERTS
-      let stockStatus = "";
-      let stockStyle = "";
-
-      if (quantity === 0) {
-        stockStatus = "No Stock";
-        stockStyle = "background-color:#ff4d4d; color:#fff; font-weight:bold;";
-      } else if (quantity <= 10) {
-        stockStatus = "Low Stock";
-        stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;";
-      } else {
-        stockStatus = "In Stock";
-        stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;";
-      }
-
-      const totalValue = (quantity * unitPrice).toFixed(2);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${itemCode}</td>
-        <td>${item}</td>
-        <td>${category}</td>
-        <td>${quantity}</td>
-        <td style="${stockStyle}">${stockStatus}</td>
-        <td>${Number(unitPrice).toFixed(2)}</td>
-        <td>${totalValue}</td>
-        <td>${expiry}</td>
-        <td>
-          <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+    await set(newRef, {
+      itemCode,
+      item,
+      category,
+      quantity,
+      stockStatus,
+      unitPrice,
+      totalValue,
+      expiry,
+      imageUrl: ""
     });
 
-    attachEditHandlers();
-    attachDeleteHandlers();
+    await set(ref(db, `products/${newRef.key}`), {
+      name: item,
+      price: unitPrice,
+      quantity,
+      category,
+      itemCode,
+      imageUrl: ""
+    });
+
+    alert("Item added successfully!");
+    addPopupOverlay.style.display = "none";
+    addItemForm.reset();
+  }
+});
+
+
+//INVENTORY TABLE RENDERING
+onValue(inventoryRef, (snapshot) => {
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!snapshot.exists()) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="10" style="text-align:center;">No inventory items</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  const sortedItems = [];
+  snapshot.forEach((childSnap) => {
+    sortedItems.push({
+      id: childSnap.key,
+      ...childSnap.val()
+    });
   });
-  // ================== 🔹 SEARCH FUNCTIONALITY ================== //
+
+  sortedItems.sort((a, b) => Number(a.itemCode) - Number(b.itemCode)); // Make sure sorting happens
+
+  sortedItems.forEach((data) => {
+    const id = data.id;
+    const itemCode = data.itemCode ?? "";
+    const item = data.item ?? "";
+    const category = data.category ?? "";
+    const quantity = Number(data.quantity ?? 0);
+    const expiry = data.expiry ?? "";
+    const unitPrice = Number(data.unitPrice ?? data.price ?? 0);
+    const imageUrl = data.imageUrl ?? "";
+
+    let stockStatus = "";
+    let stockStyle = "";
+
+    if (quantity === 0) {
+      stockStatus = "No Stock";
+      stockStyle = "background-color:#ff4d4d; color:#fff; font-weight:bold;";
+    } else if (quantity <= 10) {
+      stockStatus = "Low Stock";
+      stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;";
+    } else {
+      stockStatus = "In Stock";
+      stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;";
+    }
+
+    const totalValue = (quantity * unitPrice).toFixed(2);
+
+    const imgCell = imageUrl
+      ? `<td><img src="${imageUrl}" alt="${item}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;"></td>`
+      : `<td style="text-align:center;color:#999;font-size:12px;">No image</td>`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${itemCode}</td>
+      ${imgCell}
+      <td>${item}</td>
+      <td>${category}</td>
+      <td>${quantity}</td>
+      <td style="${stockStyle}">${stockStatus}</td>
+      <td>${unitPrice.toFixed(2)}</td>
+      <td>${totalValue}</td>
+      <td>${expiry}</td>
+      <td>
+        <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  attachEditHandlers();
+  attachArchiveHandlers();
+  checkExpiryWarnings(snapshot);
+});
+
+
+// IMAGE PREVIEW LANG FOR ADD ITEM FORM 
+const newImageInput = addItemForm.querySelector("#newImage");
+
+const previewContainer = document.createElement("div");
+previewContainer.style.marginTop = "10px";
+previewContainer.style.minHeight = "50px";
+addItemForm.querySelector("#newImage").insertAdjacentElement("afterend", previewContainer);
+
+newImageInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  previewContainer.innerHTML = ""; 
+
+  if (file) {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.style.width = "50px";
+    img.style.height = "50px";
+    img.style.objectFit = "cover";
+    img.style.borderRadius = "4px";
+    img.onload = () => URL.revokeObjectURL(img.src); 
+    previewContainer.appendChild(img);
+  } else {
+    previewContainer.textContent = "No image selected";
+    previewContainer.style.color = "#999";
+    previewContainer.style.fontSize = "12px";
+  }
+});
+
+  // SEARCH FUNCTIONALITY
   const searchInput = document.getElementById("searchItemInput");
   let allItems = [];
+
+searchInput?.addEventListener("input", (e) => {
+  const query = e.target.value.trim().toLowerCase();
+  const filtered = allItems.filter(item => 
+    (item.item ?? "").toLowerCase().includes(query) ||
+    (item.category ?? "").toLowerCase().includes(query) ||
+    (String(item.itemCode) ?? "").toLowerCase().includes(query)
+  );
+  renderTable(filtered);
+});
 
   onValue(inventoryRef, (snapshot) => {
     allItems = [];
@@ -205,366 +315,580 @@ if (!addBtn) console.error("add button not found: expected #addBtn or #addItemBt
   });
 
   function renderTable(items) {
-    tbody.innerHTML = "";
-    if (items.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">No matching items found.</td></tr>`;
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  items.sort((a, b) => Number(a.itemCode) - Number(b.itemCode));
+
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No matching items found.</td></tr>`;
+    return;
+  }
+
+  items.forEach((data) => {
+    const id = data.id;
+    const itemCode = data.itemCode ?? "";
+    const item = data.item ?? "";
+    const category = data.category ?? "";
+    const quantity = Number(data.quantity ?? 0);
+    const expiry = data.expiry ?? "";
+    const unitPrice = Number(data.unitPrice ?? data.price ?? 0);
+    const imageUrl = data.imageUrl ?? "";
+
+    let stockStatus = "";
+    let stockStyle = "";
+
+    if (quantity === 0) {
+      stockStatus = "No Stock";
+      stockStyle = "background-color:#ff4d4d; color:#fff; font-weight:bold;";
+    } else if (quantity <= 10) {
+      stockStatus = "Low Stock";
+      stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;";
+    } else {
+      stockStatus = "In Stock";
+      stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;";
+    }
+
+    const totalValue = (quantity * unitPrice).toFixed(2);
+
+    const imgCell = imageUrl
+      ? `<td><img src="${imageUrl}" alt="${item}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;"></td>`
+      : `<td style="text-align:center;color:#999;font-size:12px;">No image</td>`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${itemCode}</td>
+      ${imgCell}
+      <td>${item}</td>
+      <td>${category}</td>
+      <td>${quantity}</td>
+      <td style="${stockStyle}">${stockStatus}</td>
+      <td>${unitPrice.toFixed(2)}</td>
+      <td>${totalValue}</td>
+      <td>${expiry}</td>
+      <td>
+        <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  attachEditHandlers?.();
+  attachArchiveHandlers?.();
+}
+
+
+  // ARCHIVED ITEMS POPUP
+const archivePopup = document.getElementById("archivePopup");
+const archiveTableBody = document.getElementById("archiveTableBody");
+const closeArchiveBtn = document.getElementById("closeArchiveBtn");
+const viewArchiveBtn = document.getElementById("viewArchiveBtn");
+
+function openArchivePopup() {
+  archivePopup.style.display = "flex";
+  loadArchivedItems();
+}
+
+closeArchiveBtn.addEventListener("click", () => {
+  archivePopup.style.display = "none";
+});
+
+archivePopup.addEventListener("click", (e) => {
+  if (e.target === archivePopup) archivePopup.style.display = "none";
+});
+
+// Loads archived items from Firebase (REMINDER)
+async function loadArchivedItems() {
+  archiveTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Loading...</td></tr>`;
+  try {
+    const snapshot = await get(ref(db, "archive"));
+    if (!snapshot.exists()) {
+      archiveTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No archived items found.</td></tr>`;
       return;
     }
 
-    items.forEach((data) => {
-      const id = data.id;
-      const itemCode = data.itemCode ?? "";
-      const item = data.item ?? "";
-      const category = data.category ?? "";
-      const quantity = Number(data.quantity ?? 0);
-      const expiry = data.expiry ?? "";
-      const unitPrice = Number(data.unitPrice ?? data.price ?? 0);
+    archiveTableBody.innerHTML = "";
+    snapshot.forEach((child) => {
+      const data = child.val();
+      const id = child.key;
 
-      let stockStatus = "";
-      let stockStyle = "";
+      const imageCell = data.imageUrl
+        ? `<td><img src="${data.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:4px;"></td>`
+        : `<td style="text-align:center;color:#999;font-size:12px;">No image</td>`;
 
-      if (quantity === 0) {
-        stockStatus = "No Stock";
-        stockStyle = "background-color:#ff4d4d; color:#fff; font-weight:bold;";
-      } else if (quantity <= 10) {
-        stockStatus = "Low Stock";
-        stockStyle = "background-color:#f8d7da; color:#721c24; font-weight:bold;";
-      } else {
-        stockStatus = "In Stock";
-        stockStyle = "background-color:#d4edda; color:#155724; font-weight:bold;";
-      }
+      const totalValue = (data.quantity * data.unitPrice).toFixed(2);
 
-      const totalValue = (quantity * unitPrice).toFixed(2);
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${itemCode}</td>
-        <td>${item}</td>
-        <td>${category}</td>
-        <td>${quantity}</td>
-        <td style="${stockStyle}">${stockStatus}</td>
-        <td>${unitPrice.toFixed(2)}</td>
-        <td>${totalValue}</td>
-        <td>${expiry}</td>
-        <td>
-          <button class="editBtn" data-id="${id}"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button class="deleteBtn" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
-        </td>
+      archiveTableBody.innerHTML += `
+        <tr>
+          <td>${data.itemCode || ""}</td>
+          ${imageCell}
+          <td>${data.item || ""}</td>
+          <td>${data.category || ""}</td>
+          <td>${data.quantity || 0}</td>
+          <td>${data.unitPrice?.toFixed(2) || "0.00"}</td>
+          <td>${totalValue}</td>
+          <td>${data.expiry || ""}</td>
+          <td>${data.archivedAt ? new Date(data.archivedAt).toLocaleString() : ""}</td>
+          <td><button class="restoreBtn" data-id="${id}">Restore</button></td>
+        </tr>
       `;
-      tbody.appendChild(tr);
     });
 
-    attachEditHandlers?.();
-    attachDeleteHandlers?.();
-  }
+document.querySelectorAll(".restoreBtn").forEach((btn) => {
+  btn.onclick = async () => {
+    const id = btn.dataset.id;
+    if (!confirm("Do you want to restore this item back to inventory?")) return;
 
-  searchInput.addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = allItems.filter((data) =>
-      (data.itemCode && data.itemCode.toLowerCase().includes(term)) ||
-      (data.item && data.item.toLowerCase().includes(term)) ||
-      (data.category && data.category.toLowerCase().includes(term))
-    );
-    renderTable(filtered);
-  });
-  
-// Start of Resupply Popup Form //
-const resupplyPopup = document.createElement("div");
-resupplyPopup.classList.add("popup-overlay");
-resupplyPopup.id = "resupplyPopup";
-resupplyPopup.style.display = "none";
+    const archiveRef = ref(db, `archive/${id}`);
+    const itemSnap = await get(archiveRef);
 
-resupplyPopup.innerHTML = `
-  <div class="popup" style="margin-top:60px;">
-    <h2>Log Resupply</h2>
-    <form id="resupplyForm">
-      <label for="resupplyItem">Select Item to Resupply</label>
-      <select id="resupplyItem" required>
-        <option value="">-- Choose Item --</option>
-      </select>
-      <!-- Current expiry display -->
-      <div id="resupplyItemExpiryBox" style="display:none; background:#f8f8f8; padding:8px; margin:8px 0; border-radius:8px;">
-        <p><strong>Current Expiry:</strong> <span id="resupplyItemExpiry">—</span></p>
-      </div>
-      <label for="resupplyQuantity">Quantity to Add</label>
-      <input type="number" id="resupplyQuantity" placeholder="Enter quantity" required min="1">
-      <label for="resupplyDate">Resupply Date</label>
-      <input type="date" id="resupplyDate" required>
-      <label for="resupplyNewExpiry">New Expiry Date</label>
-      <input type="date" id="resupplyNewExpiry" required>
-      <div class="popup-buttons">
-        <button type="button" id="cancelResupply" class="cancel-btn">Cancel</button>
-        <button type="submit" class="save-btn">Save</button>
-      </div>
-    </form>
-  </div>
-`;
-document.body.appendChild(resupplyPopup);
-
-const resupplyForm = resupplyPopup.querySelector("#resupplyForm");
-const cancelResupply = resupplyPopup.querySelector("#cancelResupply");
-const resupplyItemSelect = resupplyPopup.querySelector("#resupplyItem");
-const resupplyItemExpiry = document.getElementById("resupplyItemExpiry");
-const resupplyItemExpiryBox = document.getElementById("resupplyItemExpiryBox");
-
-// Dropdown for choosing which item to resupply //
-async function populateResupplyDropdown() {
-  resupplyItemSelect.innerHTML = `<option value="">-- Choose Item Code --</option>`;
-  try {
-    const snapshot = await get(inventoryRef);
-    if (snapshot.exists()) {
-      snapshot.forEach((child) => {
-        const data = child.val();
-        const id = child.key;
-        const code = data.itemCode ?? "NoCode";
-        const name = data.item ?? "Unnamed";
-        const option = document.createElement("option");
-        option.value = id; 
-        option.textContent = `${code} - ${name}`;
-        resupplyItemSelect.appendChild(option);
-      });
+    if (!itemSnap.exists()) {
+      alert("Archived item not found!");
+      return;
     }
-  } catch (err) {
-    console.error("Error loading items:", err);
+
+    const itemData = itemSnap.val();
+
+    const newItemRef = push(ref(db, "inventory"));
+    await set(newItemRef, {
+      item: itemData.item,
+      category: itemData.category,
+      quantity: itemData.quantity,
+      unitPrice: itemData.unitPrice,
+      totalValue: itemData.totalValue,
+      expiry: itemData.expiry,
+      imageUrl: itemData.imageUrl || "",
+      itemCode: 0 
+    });
+
+    await set(ref(db, `products/${newItemRef.key}`), {
+      name: itemData.item,
+      category: itemData.category,
+      quantity: itemData.quantity,
+      price: itemData.unitPrice,
+      imageUrl: itemData.imageUrl || "",
+      itemCode: 0 
+    });
+
+    await remove(archiveRef);
+
+    const inventorySnap = await get(ref(db, "inventory"));
+    if (inventorySnap.exists()) {
+      const items = [];
+      inventorySnap.forEach((child) => {
+        items.push({ key: child.key, data: child.val() });
+      });
+
+      items.sort((a, b) => Number(a.data.itemCode || 0) - Number(b.data.itemCode || 0));
+
+      let newCode = 1000;
+      for (const item of items) {
+        const invRef = ref(db, `inventory/${item.key}`);
+        const prodRef = ref(db, `products/${item.key}`);
+        await update(invRef, { itemCode: newCode });
+        await update(prodRef, { itemCode: newCode });
+        item.data.itemCode = newCode;
+        newCode++;
+      }
+
+      allItems = items.map(i => ({ id: i.key, ...i.data }));
+      allItems.sort((a, b) => a.itemCode - b.itemCode); 
+      renderTable(allItems); 
+    }
+    alert("Item restored successfully!");
+    loadArchivedItems
+
+  };
+});
+
+  } catch (error) {
+    console.error("Failed to load archived items:", error);
+    archiveTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:red;">Failed to load archived items.</td></tr>`;
   }
 }
 
-// Show current expiry when item changes 
-resupplyItemSelect.addEventListener("change", async (e) => {
-  const selectedId = e.target.value;
-  if (!selectedId) {
-    resupplyItemExpiryBox.style.display = "none";
-    return;
-  }
+viewArchiveBtn.addEventListener("click", openArchivePopup);
 
-  try {
-    const itemSnap = await get(ref(db, `inventory/${selectedId}`));
-    if (itemSnap.exists()) {
-      const itemData = itemSnap.val();
-      resupplyItemExpiry.textContent = itemData.expiry || "—";
-      resupplyItemExpiryBox.style.display = "block";
-      document.getElementById("resupplyNewExpiry").value = itemData.expiry || "";
-    } else {
-      resupplyItemExpiryBox.style.display = "none";
-    }
-  } catch (err) {
-    console.error("Error fetching expiry:", err);
-  }
-});
-
-// Opens the Resupply Popup //
-resupplyBtn.addEventListener("click", async () => {
-  await populateResupplyDropdown();
-  const today = new Date().toISOString().split("T")[0];
-  document.getElementById("resupplyDate").value = today;
-  document.getElementById("resupplyNewExpiry").value = today;
-  resupplyItemExpiryBox.style.display = "none";
-  resupplyPopup.style.display = "flex";
-});
-
-cancelResupply.addEventListener("click", () => {
+  // RESUPPLY POPUP 
+  const resupplyPopup = document.createElement("div");
+  resupplyPopup.classList.add("popup-overlay");
+  resupplyPopup.id = "resupplyPopup";
   resupplyPopup.style.display = "none";
-  resupplyForm.reset();
-  resupplyItemExpiryBox.style.display = "none";
-});
 
+  resupplyPopup.innerHTML = `
+    <div class="popup" style="margin-top:60px;">
+      <h2>Log Resupply</h2>
+      <form id="resupplyForm">
+        <label for="resupplyItem">Select Item to Resupply</label>
+        <select id="resupplyItem" required> <option value="">-- Choose Item --</option> </select>
+        <div id="resupplyItemExpiryBox" style="display:none; background:#f8f8f8; padding:8px; margin:8px 0; border-radius:8px;">
+          <p><strong>Current Expiry:</strong> <span id="resupplyItemExpiry">—</span></p>
+        </div>
+        <label for="resupplyQuantity">Quantity to Add</label>
+        <input type="number" id="resupplyQuantity" placeholder="Enter quantity" required min="1">
+        <label for="resupplyDate">Resupply Date</label>
+        <input type="date" id="resupplyDate" required>
+        <label for="resupplyNewExpiry">New Expiry Date</label>
+        <input type="date" id="resupplyNewExpiry" required>
+        <div class="popup-buttons">
+          <button type="button" id="cancelResupply" class="cancel-btn">Cancel</button>
+          <button type="submit" class="save-btn">Save</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(resupplyPopup);
 
-resupplyPopup.addEventListener("click", (e) => {
-  if (e.target === resupplyPopup) resupplyPopup.style.display = "none";
-});
+  const resupplyForm = resupplyPopup.querySelector("#resupplyForm");
+  const cancelResupply = resupplyPopup.querySelector("#cancelResupply");
+  const resupplyItemSelect = resupplyPopup.querySelector("#resupplyItem");
+  const resupplyItemExpiry = document.getElementById("resupplyItemExpiry");
+  const resupplyItemExpiryBox = document.getElementById("resupplyItemExpiryBox");
 
-resupplyForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const selectedItemId = document.getElementById("resupplyItem").value;
-  const addedQty = Number(document.getElementById("resupplyQuantity").value);
-  const date = document.getElementById("resupplyDate").value;
-  const newExpiry = document.getElementById("resupplyNewExpiry").value;
-
-  if (!selectedItemId) {
-    alert("⚠️ Please select an item to resupply.");
-    return;
+  async function populateResupplyDropdown() {
+    resupplyItemSelect.innerHTML = `<option value="">-- Choose Item Code --</option>`;
+    try {
+      const snapshot = await get(inventoryRef);
+      if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+          const data = child.val();
+          const id = child.key;
+          const code = data.itemCode ?? "NoCode";
+          const name = data.item ?? "Unnamed";
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = `${code} - ${name}`;
+          resupplyItemSelect.appendChild(option);
+        });
+      }
+    } catch (err) {
+      console.error("Error loading items:", err);
+    }
   }
-  if (isNaN(addedQty) || addedQty <= 0) {
-    alert("⚠️ Please enter a valid quantity.");
-    return;
-  }
 
-  try {
-    const itemRef = ref(db, `inventory/${selectedItemId}`);
-    const itemSnap = await get(itemRef);
-
-    if (!itemSnap.exists()) {
-      alert("Item not found in inventory!");
+  resupplyItemSelect?.addEventListener("change", async (e) => {
+    const selectedId = e.target.value;
+    if (!selectedId) {
+      resupplyItemExpiryBox.style.display = "none";
       return;
     }
 
-    const currentData = itemSnap.val();
-    const oldQty = currentData.quantity || 0;
-    const newQty = oldQty + addedQty;
-    const totalValue = newQty * (currentData.unitPrice || 0);
-    const stockStatus = newQty <= 10 ? "Low Stock" : "In Stock";
+    try {
+      const itemSnap = await get(ref(db, `inventory/${selectedId}`));
+      if (itemSnap.exists()) {
+        const itemData = itemSnap.val();
+        resupplyItemExpiry.textContent = itemData.expiry || "—";
+        resupplyItemExpiryBox.style.display = "block";
+        document.getElementById("resupplyNewExpiry").value = itemData.expiry || "";
+      } else {
+        resupplyItemExpiryBox.style.display = "none";
+      }
+    } catch (err) {
+      console.error("Error fetching expiry:", err);
+    }
+  });
 
-    await update(itemRef, {
-      quantity: newQty,
-      totalValue,
-      stockStatus,
-      expiry: newExpiry,
-    });
+  resupplyBtn?.addEventListener("click", async () => {
+    await populateResupplyDropdown();
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("resupplyDate").value = today;
+    document.getElementById("resupplyNewExpiry").value = today;
+    resupplyItemExpiryBox.style.display = "none";
+    resupplyPopup.style.display = "flex";
+  });
 
-    await push(ref(db, "resupplies"), {
-      itemId: selectedItemId,
-      itemCode: currentData.itemCode,
-      itemName: currentData.item,
-      quantityAdded: addedQty,
-      previousQuantity: oldQty,
-      newQuantity: newQty,
-      previousExpiry: currentData.expiry || "",
-      newExpiry,
-      date,
-    });
-
-    alert(`${addedQty} units added to "${currentData.item}" (new stock: ${newQty})\nNew Expiry: ${newExpiry}`);
+  cancelResupply?.addEventListener("click", () => {
     resupplyPopup.style.display = "none";
     resupplyForm.reset();
     resupplyItemExpiryBox.style.display = "none";
-  } catch (error) {
-    console.error("Resupply update failed:", error);
-    alert("Something went wrong updating the inventory.");
-  }
-});
+  });
 
-// Start of Edit Popup //
+  resupplyPopup.addEventListener("click", (e) => {
+    if (e.target === resupplyPopup) resupplyPopup.style.display = "none";
+  });
 
-  const editModal = document.createElement("div");
-  editModal.id = "editModal";
-  editModal.style.display = "none";
-  editModal.style.position = "fixed";
-  editModal.style.top = "0";
-  editModal.style.left = "0";
-  editModal.style.width = "100%";
-  editModal.style.height = "100%";
-  editModal.style.background = "rgba(0,0,0,0.5)";
-  editModal.style.justifyContent = "center";
-  editModal.style.alignItems = "center";
-  editModal.innerHTML = `
-  <div style="background:white;padding:20px;border-radius:10px;min-width:300px;">
+  resupplyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const selectedItemId = document.getElementById("resupplyItem").value;
+    const addedQty = Number(document.getElementById("resupplyQuantity").value);
+    const date = document.getElementById("resupplyDate").value;
+    const newExpiry = document.getElementById("resupplyNewExpiry").value;
+
+    if (!selectedItemId) {
+      alert("⚠️ Please select an item to resupply.");
+      return;
+    }
+    if (isNaN(addedQty) || addedQty <= 0) {
+      alert("⚠️ Please enter a valid quantity.");
+      return;
+    }
+
+    try {
+      const itemRef = ref(db, `inventory/${selectedItemId}`);
+      const itemSnap = await get(itemRef);
+
+      if (!itemSnap.exists()) {
+        alert("Item not found in inventory!");
+        return;
+      }
+
+      const currentData = itemSnap.val();
+      const oldQty = currentData.quantity || 0;
+      const newQty = oldQty + addedQty;
+      const totalValue = newQty * (currentData.unitPrice || 0);
+      const stockStatus = newQty <= 10 ? "Low Stock" : "In Stock";
+
+      await update(itemRef, {
+        quantity: newQty,
+        totalValue,
+        stockStatus,
+        expiry: newExpiry,
+      });
+
+      await push(ref(db, "resupplies"), {
+        itemId: selectedItemId,
+        itemCode: currentData.itemCode,
+        itemName: currentData.item,
+        quantityAdded: addedQty,
+        previousQuantity: oldQty,
+        newQuantity: newQty,
+        previousExpiry: currentData.expiry || "",
+        newExpiry,
+        date,
+      });
+
+      alert(`${addedQty} units added to "${currentData.item}" (new stock: ${newQty})\nNew Expiry: ${newExpiry}`);
+      resupplyPopup.style.display = "none";
+      resupplyForm.reset();
+      resupplyItemExpiryBox.style.display = "none";
+    } catch (error) {
+      console.error("Resupply update failed:", error);
+      alert("Something went wrong updating the inventory.");
+    }
+  });
+
+// EDIT POPUP 
+const editModal = document.createElement("div");
+editModal.id = "editModal";
+editModal.style.display = "none";
+editModal.style.position = "fixed";
+editModal.style.top = "0";
+editModal.style.left = "0";
+editModal.style.width = "100%";
+editModal.style.height = "100%";
+editModal.style.background = "rgba(0,0,0,0.5)";
+editModal.style.justifyContent = "center";
+editModal.style.alignItems = "center";
+editModal.style.zIndex = "1000"; 
+
+editModal.innerHTML = `
+  <div style="
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    position: relative;
+  ">
     <h3>Edit Item</h3>
     <form id="editItemForm">
       <input type="hidden" id="editId">
       <label>Quantity:</label>
-      <input type="number" id="editQuantity" required><br><br>
+      <input type="number" id="editQuantity" required style="width:100%;padding:6px;margin:5px 0;"><br>
       <label>Unit Price:</label>
-      <input type="number" id="editPrice" step="0.01" required><br><br>
-      <button type="submit">Update</button>
-      <button type="button" id="cancelEdit">Cancel</button>
+      <input type="number" id="editPrice" step="0.01" required style="width:100%;padding:6px;margin:5px 0;"><br>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+         <button type="submit" class="save-btn" style="padding:6px 12px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;">Update</button>
+        <button type="button" id="cancelEdit" class="cancel-btn" style="padding:6px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+      </div>
     </form>
   </div>
-  `;
-  document.body.appendChild(editModal);
+`;
+document.body.appendChild(editModal);
 
-const editItemForm = document.getElementById("editItemForm");
-const cancelEdit = document.getElementById("cancel-btn");
-
-cancelEdit.addEventListener("click", () => {
-  editModal.style.display = "none";
-  closeEditPopup();
+editModal.addEventListener("click", (e) => {
+  if (e.target === editModal) editModal.style.display = "none";
 });
+  const editItemForm = document.getElementById("editItemForm");
+  const cancelEdit = document.getElementById("cancelEdit");
 
-function openEditPopup(id, currentQty, currentPrice) {
-  document.getElementById("editPopup").style.display = "flex";
-  document.getElementById("editQuantity").value = currentQty;
-  document.getElementById("editPrice").value = currentPrice || "";
-  document.getElementById("editForm").dataset.itemId = id; 
-}
-
-function closeEditPopup() {
-  document.getElementById("editPopup").style.display = "none";
-  editItemForm.reset();
-}
-
-function attachEditHandlers() {
-  document.querySelectorAll(".editBtn").forEach((btn) => {
-    btn.onclick = async () => {
-      const id = btn.dataset.id;
-      const snapshot = await get(ref(db, `inventory/${id}`));
-      if (!snapshot.exists()) return;
-      const data = snapshot.val();
-      openEditPopup(id, data.quantity, data.unitPrice);
-    };
-  });
-}
-
-document.getElementById("editForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const id = e.target.dataset.itemId;
-  const newQty = document.getElementById("editQuantity").value.trim();
-  const newPrice = document.getElementById("editPrice").value.trim();
-
-  if (!newQty || !newPrice) {
-    alert("Please fill out both fields.");
-    return;
-  }
-
-  try {
-    await update(ref(db, `inventory/${id}`), {
-      quantity: Number(newQty),
-      unitPrice: Number(newPrice),
-      totalValue: Number(newQty) * Number(newPrice),
-    });
-    await update(ref(db, `products/${id}`), {
-      quantity: Number(newQty),
-      price: Number(newPrice),
-    });
-
-    alert("Item updated successfully!");
+  cancelEdit?.addEventListener("click", () => {
+    editModal.style.display = "none";
     closeEditPopup();
-  } catch (error) {
-    console.error("Update failed:", error);
-    alert(" Failed to update item.");
+  });
+
+  function openEditPopup(id, currentQty, currentPrice) {
+    editModal.style.display = "flex";
+    document.getElementById("editQuantity").value = currentQty;
+    document.getElementById("editPrice").value = currentPrice || "";
+    editItemForm.dataset.itemId = id;
   }
-});
-  
-// Deletes the Item //
-  function attachDeleteHandlers() {
-    document.querySelectorAll(".deleteBtn").forEach((btn) => {
+
+  function closeEditPopup() {
+    editModal.style.display = "none";
+    editItemForm.reset();
+  }
+
+  function attachEditHandlers() {
+    document.querySelectorAll(".editBtn").forEach((btn) => {
       btn.onclick = async () => {
         const id = btn.dataset.id;
-        if (!confirm("Are you sure you want to delete this item?")) return;
-
-        await remove(ref(db, `inventory/${id}`));
-        await remove(ref(db, `products/${id}`)); // 🔹 remove from PoS as well
-        alert("Item has been deleted from inventory and PoS.");
+        const snapshot = await get(ref(db, `inventory/${id}`));
+        if (!snapshot.exists()) return;
+        const data = snapshot.val();
+        openEditPopup(id, data.quantity, data.unitPrice);
       };
     });
   }
 
-  // 🔹 STOCK STATUS ALERTS (show only once on page load)
-onValue(inventoryRef, (snapshot) => {
-  if (!snapshot.exists()) return;
+  editItemForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const lowStockItems = [];
-  const noStockItems = [];
+    const id = e.target.dataset.itemId;
+    const newQty = document.getElementById("editQuantity").value.trim();
+    const newPrice = document.getElementById("editPrice").value.trim();
 
-  snapshot.forEach((childSnap) => {
-    const data = childSnap.val();
-    const quantity = Number(data.quantity ?? 0);
-    const itemName = data.item ?? "Unnamed Item";
+    if (!newQty || !newPrice) {
+      alert("Please fill out both fields.");
+      return;
+    }
 
-    if (quantity === 0) {
-      noStockItems.push(itemName);
-    } else if (quantity <= 10) {
-      lowStockItems.push(itemName);
+    try {
+      await update(ref(db, `inventory/${id}`), {
+        quantity: Number(newQty),
+        unitPrice: Number(newPrice),
+        totalValue: Number(newQty) * Number(newPrice),
+      });
+      await update(ref(db, `products/${id}`), {
+        quantity: Number(newQty),
+        price: Number(newPrice),
+      });
+
+      alert("Item updated successfully!");
+      closeEditPopup();
+    } catch (error) {
+      console.error("Update failed:", error);
+      alert(" Failed to update item.");
     }
   });
 
-  if (noStockItems.length > 0) {
-    alert("⚠️ The following items have NO STOCK:\n\n" + noStockItems.join("\n"));
-  }
-  if (lowStockItems.length > 0) {
-    alert("⚠️ The following items are LOW in stock:\n\n" + lowStockItems.join("\n"));
-  }
-}, { onlyOnce: true });
-});
+  //
+ // ARCHIVE BUTTON IN ACTIONS
+function attachArchiveHandlers() {
+  document.querySelectorAll(".deleteBtn").forEach((btn) => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      if (!confirm("Are you sure you want to archive this item?")) return;
 
+      const itemRef = ref(db, `inventory/${id}`);
+      const productRef = ref(db, `products/${id}`);
+      const archiveRef = ref(db, `archive/${id}`);
+
+      const snapshot = await get(itemRef);
+
+      if (!snapshot.exists()) {
+        alert("Item not found.");
+        return;
+      }
+
+      const itemData = snapshot.val();
+      itemData.archivedAt = new Date().toISOString();
+
+      // STEP 1: move to archive
+      await set(archiveRef, itemData);
+      await remove(itemRef);
+      await remove(productRef);
+
+      // STEP 2: Re-sequence inventory
+      const inventorySnap = await get(ref(db, "inventory"));
+      if (inventorySnap.exists()) {
+        let items = [];
+
+        inventorySnap.forEach(child => {
+          const data = child.val();
+          items.push({
+            key: child.key,
+            itemCode: Number(data.itemCode) || 0,
+            data: data
+          });
+        });
+
+        items.sort((a, b) => a.itemCode - b.itemCode);
+
+        let newCode = 1000;
+        for (const item of items) {
+          await update(ref(db, `inventory/${item.key}`), { itemCode: newCode });
+          await update(ref(db, `products/${item.key}`), { itemCode: newCode });
+          item.data.itemCode = newCode;
+          newCode++;
+        }
+
+        if (typeof allItems !== "undefined") {
+          allItems = items.map(i => ({
+            id: i.key,
+            ...i.data
+          }));
+
+          allItems.sort((a, b) => a.itemCode - b.itemCode);
+
+          renderTable(allItems); 
+        }
+      }
+
+      alert("Item archived and item codes re-sequenced correctly.");
+    };
+  });
+}
+
+
+  // ----------------- STOCK + EXPIRY ALERTS -----------------
+  onValue(inventoryRef, (snapshot) => {
+    if (!snapshot.exists()) return;
+
+    const lowStockItems = [];
+    const noStockItems = [];
+    const expiryWarnings = [];
+
+    const today = new Date();
+
+    snapshot.forEach((childSnap) => {
+      const data = childSnap.val();
+      const quantity = Number(data.quantity ?? 0);
+      const itemName = data.item ?? "Unnamed Item";
+      const expiry = data.expiry;
+
+      if (quantity === 0) {
+        noStockItems.push(itemName);
+      } else if (quantity <= 10) {
+        lowStockItems.push(itemName);
+      }
+
+      if (expiry) {
+        const expiryDate = new Date(expiry);
+        const diffTime = expiryDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 15 && diffDays >= 0) {
+          expiryWarnings.push(`${itemName} will expire in ${diffDays} day(s).`);
+        }
+      }
+    });
+
+    if (noStockItems.length > 0) {
+      alert("⚠️ The following items have NO STOCK:\n\n" + noStockItems.join("\n"));
+    }
+
+    if (lowStockItems.length > 0) {
+      alert("⚠️ The following items are LOW in stock:\n\n" + lowStockItems.join("\n"));
+    }
+
+    if (expiryWarnings.length > 0) {
+      alert("⚠️ EXPIRY WARNING ⚠️\n\n" + expiryWarnings.join("\n"));
+    }
+
+  }, { onlyOnce: true });
+
+});

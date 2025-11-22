@@ -7,47 +7,49 @@
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
         <script type="module" src="../js/inventory.js"></script>
+        <script type="module" src="../js/edititemform.js"></script>
           
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     </head>
     <body>
         <!--Start of Navigation Bar-->
-   <header>
-    <div class="logo">
-      <img src="../img/logo.png">
-      <h1>VHT Naturals</h1>
+  <aside class="sidebar">
+    <div>
+      <div class="brand">
+        <button id="collapseBtn" class="collapse-btn">
+    <img src="../img/logo.png" alt="logo">
+  </button>
+        
+        <h1>VHT Naturals</h1>
+      </div>
+      <nav>
+        <div id="nav-links">
+        <a href="#" class="dropdown-btn" ><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+        <div class="dropdown">
+          <a href="dashboard.html#sales"onclick="showPage('sales')"> <img src="../img/philippine-peso (1).png" class="peso-icon"><span>Sales</span></a>
+            <a href="dashboard.html#inventory" onclick="showPage('inventory')"><i data-lucide="boxes"></i><span>Inventory</span></a>
+        </div>
+        </div>
+        <a href="pos.html"><i data-lucide="package"></i> <span>Point of Sales</span></a>
+        <a href="inventory.html"><i data-lucide="shopping-cart"></i> <span>Inventory</span></a>
+        <a href="receipthistory.html"><i data-lucide="bar-chart-2"></i> <span>Transaction History</span> </a>
+      </nav>
     </div>
-
-    
-    <nav>
-      <ul id="nav-links">
-       <li> <a href="#">Dashboard ▾</a>
-          <div class="dropdown">
-            <a href="dashboard.html#sales">Sales</a>
-            <a href="dashboard.html#inventory">Inventory</a>
-            </div>
-          </li>
-        <li><a href="pos.html">Point of Sales</a></li>
-        <li><a href="inventory.html">Inventory</a></li>
-        <li><a href="receipthistory.html">Transaction History</a></li>
-        <li><a href="/index.html">Logout</a></li>
-      </ul>
-    </nav>
-
-    <button class="menu-toggle" id="menu-toggle">
-      <i data-lucide="menu"></i>
-    </button>
-
-  </header>
+    <div class="logout">
+      <a href="../index.html"><i data-lucide="log-out"></i> <span>Logout</span></a>
+    </div>
+  </aside>
         <!-- End of Navigation Bar -->
         <!-- Body of Inventory (Chart ng inventory)-->
 
-         <main class="main-content" id="mainContent">
+    <main class="main-content" id="mainContent">
 
     <div class="buttons">
       <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
       <button id="resupplyBtn" class="btn"><i class="fa-solid fa-boxes-packing"></i> Resupply</button>
+      <button id="viewArchiveBtn" class="btn btn-archive">View Archived Items</button>
       <input type="text"  class="btn" id="searchItemInput" placeholder="Search by code, name, or category...">
+    
     </div>
 
     <!-- Inventory Table -->
@@ -57,6 +59,7 @@
     <thead>
       <tr>
         <th>Item Code</th>
+        <th>Image</th>
         <th>Product Name</th>
         <th>Category</th>
         <th>Quantity</th>
@@ -75,17 +78,23 @@
 <!-- Add Item Form (hidden by default) -->
 <div id="addItemFormContainer" style="display:none; margin-top:20px;">
   <h3>Add New Item</h3>
-    <form id="addItemForm">
-      <input type="text" id="newCode" placeholder="Item Code" required>
-      <input type="text" id="newItem" placeholder="Product Name" required>
-      <input type="text" id="newCategory" placeholder="Category" required>
-      <input type="number" id="newQuantity" placeholder="Quantity" required>
-      <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
-      <input type="file" id="itemImage" accept="image/*" /> <!-- NEW FIELD -->
-      <input type="date" id="newExpiry" required>
-      <button type="submit">Add Item</button>
-      <button type="button" id="cancelAdd">Cancel</button>
-    </form>
+     <form id="addItemForm">
+
+        <input type="text" id="newItem" placeholder="Product Name" required>
+        <input type="text" id="newCategory" placeholder="Category" required>
+        <input type="number" id="newQuantity" placeholder="Quantity" required>
+        <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
+        <input type="date" id="newExpiry" required>
+
+        <!-- Image field -->
+        <label style="margin-top:10px;">Product Image</label>
+        <input type="file" id="newImage" accept="image/*">
+
+        <div class="popup-buttons">
+          <button type="button" id="cancelAdd" class="cancel-btn">Cancel</button>
+          <button type="submit" class="save-btn">Add Item</button>
+        </div>
+      </form>
 </div>
 
 <!-- Edit Popup -->
@@ -107,83 +116,64 @@
   </div>
 </div>
 
+ <!-- Archived Items Modal -->
+  <div class="popup-overlay" id="archivePopup">
+    <div class="popup" style="width:90%; max-width:800px; max-height:80vh; overflow:auto;">
+      <h2>Archived Items</h2>
+      <table style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th>Item Code</th>
+            <th>Image</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total Value</th>
+            <th>Expiry</th>
+            <th>Archived At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="archiveTableBody">
+          <tr><td colspan="9" style="text-align:center;">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button id="closeArchiveBtn" class="cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+</body>
 
         <!--SCRIPT NA ITO -->
   <script src="https://unpkg.com/lucide@latest"></script>
-<script>
-  lucide.createIcons();
+  <script>
+    lucide.createIcons();
+const collapseBtn = document.getElementById("collapseBtn");
+  const sidebar = document.querySelector(".sidebar");
+  const main = document.querySelector(".main");
+
+  document.getElementById("collapseBtn").addEventListener("click", () => {
+  document.body.classList.toggle("collapsed");
+});
+
+  collapseBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+    main.classList.toggle("collapsed");
+  });
+    // Toggle Dashboard dropdown
+  document.querySelector(".dropdown-btn").addEventListener("click", () => {
+  document.querySelector(".dropdown").classList.toggle("active");
+});
 
 
-  function showWarningPopup() {
-  let popup = document.getElementById("inactivityWarning");
-  if (!popup) {
-    popup = document.createElement("div");
-    popup.id = "inactivityWarning";
-    popup.textContent = "⚠️ You have been inactive. Auto logout in 30 seconds...";
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
-      background: "rgba(0,0,0,0.😎",
-      color: "white",
-      padding: "10px 15px",
-      borderRadius: "8px",
-      zIndex: "9999",
-      fontFamily: "sans-serif",
-    });
-    document.body.appendChild(popup);
-  } else {
-    popup.style.display = "block";
-  }
-}
-
-function hideWarningPopup() {
-  const popup = document.getElementById("inactivityWarning");
-  if (popup) popup.style.display = "none";
-}
-
-function startInactivityTimers() {
-  if (inactivityTimer) clearTimeout(inactivityTimer);
-  if (warningTimer) clearTimeout(warningTimer);
-  hideWarningPopup();
-
-  warningTimer = setTimeout(showWarningPopup, AUTO_LOGOUT_MS - 30000);
-
-  inactivityTimer = setTimeout(async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    if (!sessionStorage.getItem(AUTO_LOGOUT_DONE_KEY)) {
-      sessionStorage.setItem(AUTO_LOGOUT_DONE_KEY, "1");
-      await writeUserLog("auto logged out");
-    }
-
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error("signOut error:", err);
-    }
-    sessionStorage.clear();
-    window.location.href = "/index.html";
-  }, AUTO_LOGOUT_MS);
-}
-
-function resetInactivityTimer() {
-  if (auth.currentUser) startInactivityTimers();
-}
-
-["mousemove", "keydown", "click", "scroll", "touchstart"].forEach((evt) =>
-  document.addEventListener(evt, resetInactivityTimer, { passive: true })
-);
-  const menuToggle = document.getElementById("menu-toggle");
-  const navLinks = document.getElementById("nav-links");
-
-  
-  menuToggle.addEventListener("click", () => {
-    navLinks.classList.toggle("active");
+  dropdownBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    dropdownMenu.classList.toggle("show");
   });
 
-  
   function showPage(pageId) {
     const pages = document.querySelectorAll('.page');
     pages.forEach(page => page.classList.remove('active'));
@@ -193,15 +183,20 @@ function resetInactivityTimer() {
   }
 
   
-  window.addEventListener("load", () => {
-    const hash = window.location.hash.substring(1); // remove #
-    if (hash === "sales" || hash === "inventory") {
-      showPage(hash);
-    } else {
-      
-      showPage("sales");
-    }
-  });
+ window.addEventListener("load", () => {
+  const hash = window.location.hash.substring(1);
+
+  if (hash === "sales") {
+    showPage("sales");
+  } else if (hash === "inventory") {
+    showPage("inventory");
+  } else {
+    // default fallback
+    showPage("sales");
+  }
+
+  
+});
   </script>
     </body>
 </html>

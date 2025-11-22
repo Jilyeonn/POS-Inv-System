@@ -215,8 +215,6 @@ function recalcAggregatesAndRender() {
             <td>${new Date(tx.timestamp).toLocaleString()}</td>
             <td>${itemsHTML}</td>
             <td>${formatCurrency(tx.total || computeSaleTotalFromItems(tx.items))}</td>
-            <td>${formatCurrency(tx.cashGiven || 0)}</td>
-            <td>${formatCurrency(tx.change || 0)}</td>
           </tr>`;
         transactionTbody.innerHTML += row;
       });
