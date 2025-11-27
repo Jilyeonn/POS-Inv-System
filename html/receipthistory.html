@@ -9,7 +9,7 @@
     </head>
     <body>
         <!--Start of Navigation Bar-->
-  <aside class="sidebar">
+   <aside class="sidebar">
     <div>
       <div class="brand">
         <button id="collapseBtn" class="collapse-btn">
@@ -29,10 +29,11 @@
         <a href="pos.html"><i data-lucide="package"></i> <span>Point of Sales</span></a>
         <a href="inventory.html"><i data-lucide="shopping-cart"></i> <span>Inventory</span></a>
         <a href="receipthistory.html"><i data-lucide="bar-chart-2"></i> <span>Transaction History</span> </a>
+        <a href="settings.html"><i data-lucide="settings"></i> <span>Settings</span> </a>
       </nav>
     </div>
     <div class="logout">
-      <a href="../index.html"><i data-lucide="log-out"></i> <span>Logout</span></a>
+      <a href="../index.html" id="logoutBtn"><i data-lucide="log-out"></i> <span>Logout</span></a>
     </div>
   </aside>
         <!-- End of Navigation Bar -->
@@ -55,9 +56,6 @@
   
 </div>
     <div class="table-container">
-    
-      
-
     <table id="transactionsTable">
       <thead>
         <tr>
@@ -78,7 +76,8 @@
   </div>  
         </body>
 
-
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();
@@ -129,7 +128,5 @@ const collapseBtn = document.getElementById("collapseBtn");
 });
     
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    </body>
+ 
 </html>

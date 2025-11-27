@@ -1,47 +1,56 @@
  body {
       font-family: "Poppins", sans-serif;
-      background-color: #f4f6f9;
-      margin: 0;
+      background-color: #2d7044;
+      margin:0;
     }
 
 .container{
   display:flex;
   flex-direction: row;
-  width:80%;
-  
+  width: 100%;
 }
 
 .container-1{
     display:flex;
     flex-direction: column;
-    margin-left: 20px;
-    width: 75%;
-    height:500px;
+    padding-left: 20px;
+    width: 62%;
+    height:100%;
     border-right: 1px solid gray;
     top: 0;
+    
+}
+
+.container-2{
+  width: 33%;
 }
 
 /* Default expanded sidebar */
 body .container {
-  margin-left: 200px;
-  transition: margin-left 0.3s ease;
+  padding-left: 180px;
+  transition: padding-left 0.3s ease;
+  background-color: #2d7044;
 }
 
 /* When collapsed */
 body.collapsed .container {
-  margin-left: 100px;
+  padding-left: 100px;
+  background-color: #2d7044;
 }
 
 body.collapsed .container-1 {
-  width: 80%;
+  width: 60%;
 }
 
 body.collapsed .checkout {
-  width: 130%;
+  width: 100%;
+  padding-left:20px;
 }
 
 body.collapsed .total {
-  width: 130%;
+  width: 100%;
+  padding-left: 20px;
+  background-color: #2d7044;
 }
 .products {
       padding-top: 10px;
@@ -55,7 +64,7 @@ body.collapsed .total {
 
     .product-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 0fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 0fr));
       gap: 10px;
     }
 
@@ -122,38 +131,35 @@ body.collapsed .total {
       background: #59b731;
     }
 
-    
-
     .checkout {
-      margin-left: 20px;
-      margin-top: 15px;
-      width:100%;
+      padding-left: 10px;
+      padding-top: 20px;
+      width:105%;
       height:230px;
-      overflow: auto;
-      background-color: #f4f6f9;
+      overflow-x: auto;
+      background-color: #2d7044;
     }
 
   .checkout1, .checkout2, .checkout3{
     display:flex;
   }
 
-    
-
     .cart-item {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
       border-bottom: 1px solid #eee;
       font-size: 15px;
     }
 
     .total {
       font-weight: bold;
-      padding-left:10px;
-      padding-right:10px;
+      padding-left:30px;
+
       padding-bottom:10px;
-      padding-top: 5px;
-      background-color: #f4f6f9;
+      margin-top: 30px;
+      background-color: #2d7044;
+      
+      color:white;
     }
 
     .total p{
@@ -184,13 +190,6 @@ body.collapsed .total {
       border-radius: 8px;
       bottom: 0;
     }
-
-.end{
-  bottom: 0;
-  width: 100%;
-  padding-top: 10px;
-  margin-left: 10px;
-}
     
      .orders { 
         margin-top: 20px; 
@@ -222,7 +221,8 @@ body.collapsed .total {
   font-size:14px;
   text-align:center
 }
-.creceiptbtn{
+
+.print-btn{
   margin-top:10px;
   padding:6px 12px;
   border:none;
@@ -252,4 +252,34 @@ label{
 
 #discountError{
   white-space: pre-line;
+}
+
+/* Print-specific styles */
+@media print {
+  body * {
+    visibility: hidden; /* Hide everything else on the page */
+  }
+  #receiptPrintArea, #receiptPrintArea * {
+    visibility: visible; /* Only show the receipt */
+  }
+
+  #receiptPrintArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 58mm; /* Adjust for thermal printer size (58mm or 80mm) */
+    padding: 5px;
+    font-size: 12px; /* Adjust font size for better fitting */
+  }
+
+  /* Optional: add padding, line spacing, or other adjustments to fit the receipt better */
+  table, td {
+    padding: 5px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .print-btn, .download-btn {
+    display: none; /* Hide buttons when printing */
+  }
 }

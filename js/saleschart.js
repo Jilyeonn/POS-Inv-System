@@ -73,35 +73,36 @@ function generateOrderNumber() {
 
 // ---------- Create Charts ----------
 function createCharts() {
-  const ctxLine = document.getElementById('lineSales').getContext('2d');
-  lineChart = new Chart(ctxLine, {
-    type: 'line',
-    data: {
-      labels: buildDaysArray(DAYS_TO_SHOW),
-      datasets: [{
-        label: 'Daily Sales',
-        data: Array(DAYS_TO_SHOW).fill(0),
-        tension: 0.3,
-        fill: true,
-        borderWidth: 2,
-        pointRadius: 3,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { maxRotation: 0 } }, y: { beginAtZero: true } }
-    }
-  });
+  const ctxLine = document.getElementById('lineSales').getContext('2d');
+  lineChart = new Chart(ctxLine, {
+    type: 'line',
+    data: {
+      labels: buildDaysArray(DAYS_TO_SHOW),
+      datasets: [{
+        label: 'Daily Sales',
+        data: Array(DAYS_TO_SHOW).fill(0),
+        tension: 0.3,
+        fill: true,
+        borderWidth: 2,
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { maxRotation: 0 } }, y: { beginAtZero: true } }
+    }
+  });
 
-  const ctxBar = document.getElementById('barProducts').getContext('2d');
-  barChart = new Chart(ctxBar, {
-    type: 'bar',
-    data: { labels: [], datasets: [{ label: 'Revenue', data: [], borderRadius: 6 }] },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-  });
+  const ctxBar = document.getElementById('barProducts').getContext('2d');
+  barChart = new Chart(ctxBar, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Revenue', data: [], borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
 
-  const ctxPie = document.getElementById('pieCategories').getContext('2d');
+   const ctxPie = document.getElementById('pieCategories').getContext('2d');
+
   pieChart = new Chart(ctxPie, {
     type: 'pie',
     data: {
@@ -113,14 +114,23 @@ function createCharts() {
         borderWidth: 2
       }]
     },
+
     options: {
+
       responsive: true,
+
       plugins: {
-        legend: { position: 'bottom' },
+
+        legend: { position: 'top' },
+
         title: { display: true, text: 'Category Sales Distribution' }
+
       }
+
     }
+
   });
+
 }
 
 // ---------- Recalculate & Render ----------
@@ -151,7 +161,11 @@ function recalcAggregatesAndRender() {
         productTotals[pid].revenue += revenue;
         productTotals[pid].qty += qty;
 
-        const category = it.category || productCategoryMap[pid] || 'Uncategorized';
+        const category = it.category 
+    ? it.category // Use category saved in the sale record (Fix 1 ensures this for future sales)
+    : productCategoryMap[pid] // Fallback to the live/archived category map
+    ? productCategoryMap[pid]
+    : 'Uncategorized';
         if (!categoryTotals[category]) categoryTotals[category] = 0;
         categoryTotals[category] += revenue;
       }
@@ -285,9 +299,11 @@ function startRealtimeListeners() {
 
 // ---------- Boot ----------
 async function boot() {
-  await loadProductCategories();
-  createCharts();
-  startRealtimeListeners();
+
+await loadProductCategories()
+  createCharts();
+  startRealtimeListeners();
+  startProductsListener(); 
 }
 
 boot();
@@ -297,17 +313,25 @@ document.getElementById('salesPeriodSelect').addEventListener('change', (e) => {
   recalcAggregatesAndRender();
 });
 
+
 async function loadProductCategories() {
-  const productsRef = ref(db, PRODUCTS_NODE);
-  try {
-    const snapshot = await get(productsRef);
-    const products = snapshot.val() || {};
-    for (const pid in products) {
-      const p = products[pid];
-      if (p.category) productCategoryMap[pid] = p.category;
-    }
-    console.log("✅ Product categories loaded:", productCategoryMap);
-  } catch (err) {
-    console.error("Error loading product categories:", err);
-  }
-}
+  const productsRef = ref(db, PRODUCTS_NODE);
+  try {
+    const snapshot = await get(productsRef);
+    const products = snapshot.val() || {};
+    
+    for (const pid in products) {
+      const p = products[pid];
+      
+      // ✅ FIX: REMOVE the p.isArchived check. 
+      // We need the category for ALL products (archived or not) 
+      // to correctly categorize historical sales data.
+      if (p.category) {
+        productCategoryMap[pid] = p.category;
+      }
+    }
+    console.log("✅ Product categories loaded:", productCategoryMap);
+  } catch (err) {
+    console.error("Error loading product categories:", err);
+  }
+};

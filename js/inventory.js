@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, get, update, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {getAuth, onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBoZdu6XiF70_x3HwJttP6e639h-5IKWsE",
@@ -13,7 +14,44 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user || null;
+});
+
+// ================== ACTIVITY LOGGER ==================
+function logActivity(action, details = "") {
+  const logsRef = ref(db, "systemLogs");
+  const user = auth.currentUser;
+  
+  // Define options for Philippine Standard Time (PST, UTC+8)
+  const options = {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false // Use 24-hour format
+  };
+  
+  // Generate the Manila time string
+  const manilaTimestamp = new Date().toLocaleString('en-PH', options);
+
+  const logData = {
+    userId: user?.uid || "Unknown",
+    email: user?.email || "Unknown",
+    action,
+    details,
+    // Store the formatted Manila time string
+    timestamp: manilaTimestamp 
+  };
+
+  return push(logsRef, logData);
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const resupplyBtn = document.getElementById("resupplyBtn");
@@ -42,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <input type="text" id="newCategory" placeholder="Category" required>
         <input type="number" id="newQuantity" placeholder="Quantity" required>
         <input type="number" id="newPrice" placeholder="Unit Price" step="0.01" required>
+        <label style="margin-top:10px;">Expiration Date</label>
         <input type="date" id="newExpiry" required>
 
         <!-- Image field -->
@@ -136,6 +175,8 @@ addItemForm.addEventListener("submit", async (e) => {
         imageUrl: imageData
       });
 
+      logActivity("Added Item", `Item: ${item}, Qty: ${quantity}, Price: ${unitPrice}`);
+
       alert("Item added successfully!");
       addPopupOverlay.style.display = "none";
       addItemForm.reset();
@@ -168,6 +209,7 @@ addItemForm.addEventListener("submit", async (e) => {
       expiry,
       imageUrl: ""
     });
+
 
     await set(ref(db, `products/${newRef.key}`), {
       name: item,
@@ -398,6 +440,36 @@ archivePopup.addEventListener("click", (e) => {
   if (e.target === archivePopup) archivePopup.style.display = "none";
 });
 
+async function deleteArchivedItem(id) {
+    if (!confirm("⚠️ WARNING: This will permanently delete the item from the archive. Are you sure?")) {
+        return;
+    }
+
+    try {
+        const archiveRef = ref(db, `archive/${id}`);
+        const itemSnap = await get(archiveRef);
+        
+        if (!itemSnap.exists()) {
+            alert("Archived item not found!");
+            return;
+        }
+
+        const itemData = itemSnap.val();
+        await remove(archiveRef); // Permanently delete from Firebase
+
+        logActivity(
+            "Permanently Deleted Item",
+            `Item Name: ${itemData.item} | Item Code: ${itemData.itemCode} (from Archive)`
+        );
+
+        alert("Item permanently deleted successfully!");
+        loadArchivedItems(); // Reload the list
+    } catch (error) {
+        console.error("Failed to delete archived item:", error);
+        alert("An error occurred while deleting the item.");
+    }
+}
+
 // Loads archived items from Firebase (REMINDER)
 async function loadArchivedItems() {
   archiveTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Loading...</td></tr>`;
@@ -430,10 +502,21 @@ async function loadArchivedItems() {
           <td>${totalValue}</td>
           <td>${data.expiry || ""}</td>
           <td>${data.archivedAt ? new Date(data.archivedAt).toLocaleString() : ""}</td>
-          <td><button class="restoreBtn" data-id="${id}">Restore</button></td>
+          <td style="margin-bottom: 10px;">
+            <button class="restoreBtn" data-id="${id}" style="background-color: #ede4e4;">Restore</button>
+            <button class="deleteArchiveBtn" data-id="${id}" style="background-color: #dc3545; color: white;">Delete</button>
+        </td>
+          
         </tr>
       `;
     });
+
+    document.querySelectorAll(".deleteArchiveBtn").forEach((btn) => {
+            btn.onclick = () => {
+                const id = btn.dataset.id;
+                deleteArchivedItem(id);
+            };
+        });
 
 document.querySelectorAll(".restoreBtn").forEach((btn) => {
   btn.onclick = async () => {
@@ -472,6 +555,11 @@ document.querySelectorAll(".restoreBtn").forEach((btn) => {
     });
 
     await remove(archiveRef);
+
+   logActivity(
+  "Restored Item",
+  `Item Name: ${itemData.item} | Item Code: ${itemData.itemCode}`
+);
 
     const inventorySnap = await get(ref(db, "inventory"));
     if (inventorySnap.exists()) {
@@ -659,6 +747,12 @@ viewArchiveBtn.addEventListener("click", openArchivePopup);
         date,
       });
 
+      logActivity(
+  "Resupply",
+  `Item: ${currentData.item}, Added: ${addedQty}, Old Qty: ${oldQty}, New Qty: ${newQty}`
+);
+
+
       alert(`${addedQty} units added to "${currentData.item}" (new stock: ${newQty})\nNew Expiry: ${newExpiry}`);
       resupplyPopup.style.display = "none";
       resupplyForm.reset();
@@ -670,81 +764,86 @@ viewArchiveBtn.addEventListener("click", openArchivePopup);
   });
 
 // EDIT POPUP 
-const editModal = document.createElement("div");
-editModal.id = "editModal";
-editModal.style.display = "none";
-editModal.style.position = "fixed";
-editModal.style.top = "0";
-editModal.style.left = "0";
-editModal.style.width = "100%";
-editModal.style.height = "100%";
-editModal.style.background = "rgba(0,0,0,0.5)";
-editModal.style.justifyContent = "center";
-editModal.style.alignItems = "center";
-editModal.style.zIndex = "1000"; 
 
-editModal.innerHTML = `
-  <div style="
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    position: relative;
-  ">
-    <h3>Edit Item</h3>
+  const editModal = document.createElement("div");
+  editModal.id = "editModal";
+  editModal.style.display = "none";
+  editModal.style.position = "fixed";
+  editModal.style.top = "0";
+  editModal.style.left = "0";
+  editModal.style.width = "100%";
+  editModal.style.height = "100%";
+  editModal.style.background = "rgba(0,0,0,0.5)";
+  editModal.style.justifyContent = "center";
+  editModal.style.alignItems = "center";
+  editModal.innerHTML = `
+  <div style="background:white;padding:20px;border-radius:10px;min-width:300px;">
+    <h3>Edit</h3>
     <form id="editItemForm">
       <input type="hidden" id="editId">
       <label>Quantity:</label>
-      <input type="number" id="editQuantity" required style="width:100%;padding:6px;margin:5px 0;"><br>
+      <input type="number" id="editQuantity" required><br><br>
       <label>Unit Price:</label>
-      <input type="number" id="editPrice" step="0.01" required style="width:100%;padding:6px;margin:5px 0;"><br>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
-         <button type="submit" class="save-btn" style="padding:6px 12px;background:#28a745;color:#fff;border:none;border-radius:4px;cursor:pointer;">Update</button>
-        <button type="button" id="cancelEdit" class="cancel-btn" style="padding:6px 12px;background:#dc3545;color:#fff;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
-      </div>
+      <input type="number" id="editPrice" step="0.01" required><br><br>
+
+      <div id="currentImageDisplay" style="text-align:center; margin-bottom: 15px;"> </div>
+
+      <label for="editImageFile">Change Image:</label>
+      <input type="file" id="editImageFile" accept="image/*"><br><br>
+
+      <button type="submit">Update</button>
+      <button type="button" id="cancelEdit">Cancel</button>
     </form>
   </div>
-`;
-document.body.appendChild(editModal);
+  `;
+  document.body.appendChild(editModal);
 
-editModal.addEventListener("click", (e) => {
-  if (e.target === editModal) editModal.style.display = "none";
+const editForm = document.getElementById("editForm");
+const cancelEdit = document.getElementById("cancel-btn");
+
+cancelEdit.addEventListener("click", () => {
+  editModal.style.display = "none";
+  closeEditPopup();
 });
-  const editItemForm = document.getElementById("editItemForm");
-  const cancelEdit = document.getElementById("cancelEdit");
 
-  cancelEdit?.addEventListener("click", () => {
-    editModal.style.display = "none";
-    closeEditPopup();
-  });
+function openEditPopup(id, currentQty, currentPrice) {
+  document.getElementById("editPopup").style.display = "flex";
+  document.getElementById("editQuantity").value = currentQty;
+  document.getElementById("editPrice").value = currentPrice || "";
+  document.getElementById("editForm").dataset.itemId = id; 
+  document.getElementById("editImageFile").value = ""; // Clear file input on open
 
-  function openEditPopup(id, currentQty, currentPrice) {
-    editModal.style.display = "flex";
-    document.getElementById("editQuantity").value = currentQty;
-    document.getElementById("editPrice").value = currentPrice || "";
-    editItemForm.dataset.itemId = id;
-  }
+    const imageDisplay = document.getElementById("currentImageDisplay");
+    if (currentImageUrl) {
+        imageDisplay.innerHTML = `
+            <img src="${currentImageUrl}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 5px; border: 1px solid #ccc;"><br>
+            <small>Current Image</small>
+        `;
+    } else {
+        imageDisplay.innerHTML = `<small>No current image</small>`;
+    }
+}
 
-  function closeEditPopup() {
-    editModal.style.display = "none";
-    editItemForm.reset();
-  }
+function closeEditPopup() {
+  document.getElementById("editPopup").style.display = "none";
+  editItemForm.reset();
+}
 
-  function attachEditHandlers() {
-    document.querySelectorAll(".editBtn").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = btn.dataset.id;
-        const snapshot = await get(ref(db, `inventory/${id}`));
-        if (!snapshot.exists()) return;
-        const data = snapshot.val();
-        openEditPopup(id, data.quantity, data.unitPrice);
-      };
-    });
-  }
+function attachEditHandlers() {
+  document.querySelectorAll(".editBtn").forEach((btn) => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const snapshot = await get(ref(db, `inventory/${id}`));
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
+        
+      // Pass the current image URL to the popup function
+      openEditPopup(id, data.quantity, data.unitPrice, data.imageUrl); 
+    };
+  });
+}
 
-  editItemForm?.addEventListener("submit", async (e) => {
+  editForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const id = e.target.dataset.itemId;
@@ -767,6 +866,15 @@ editModal.addEventListener("click", (e) => {
         price: Number(newPrice),
       });
 
+const snapshot = await get(ref(db, `inventory/${id}`));
+    const currentData = snapshot.val();
+
+    // 🔥 Updated log format
+    logActivity(
+      "Edited Item",
+      `Item Name: ${currentData.item} | New Qty: ${newQty} | New Price: ${newPrice}`
+    );
+
       alert("Item updated successfully!");
       closeEditPopup();
     } catch (error) {
@@ -774,6 +882,7 @@ editModal.addEventListener("click", (e) => {
       alert(" Failed to update item.");
     }
   });
+
 
   //
  // ARCHIVE BUTTON IN ACTIONS
@@ -799,8 +908,24 @@ function attachArchiveHandlers() {
 
       // STEP 1: move to archive
       await set(archiveRef, itemData);
-      await remove(itemRef);
-      await remove(productRef);
+      await remove(itemRef);
+
+      // STEP 1B: UPDATE the 'products' node instead of deleting it.
+      // This preserves category/price for past sales records in the dashboard.
+      // We also set quantity to 0 and isArchived to true to hide it from PoS.
+      await update(productRef, {
+  isArchived: true, // Flag to indicate it's archived
+  quantity: 0,      // Set quantity to 0 to make it unavailable for sale/PoS
+  category: itemData.category, // <— CRITICAL: Explicitly ensure the category is saved
+  name: itemData.item,
+  price: itemData.unitPrice,// Keep the price
+      });
+      
+
+      logActivity(
+  "Archived Item",
+  `Item: ${itemData.item}, Code: ${itemData.itemCode}`
+);
 
       // STEP 2: Re-sequence inventory
       const inventorySnap = await get(ref(db, "inventory"));
@@ -850,6 +975,7 @@ function attachArchiveHandlers() {
 
     const lowStockItems = [];
     const noStockItems = [];
+    const expiredItems = [];
     const expiryWarnings = [];
 
     const today = new Date();
@@ -866,29 +992,41 @@ function attachArchiveHandlers() {
         lowStockItems.push(itemName);
       }
 
-      if (expiry) {
-        const expiryDate = new Date(expiry);
-        const diffTime = expiryDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+     if (expiry) {
+  const expiryDate = new Date(expiry);
+  const diffTime = expiryDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays <= 15 && diffDays >= 0) {
-          expiryWarnings.push(`${itemName} will expire in ${diffDays} day(s).`);
-        }
-      }
-    });
+  // If expired (diffDays < 0)
+  if (diffDays <= 0) {
+    expiredItems.push(`${itemName} has already EXPIRED.`);
+  }
 
-    if (noStockItems.length > 0) {
-      alert("⚠️ The following items have NO STOCK:\n\n" + noStockItems.join("\n"));
-    }
+  // If expiring soon (0 to 15 days)
+  if (diffDays <= 15 && diffDays >= 1) {
+    expiryWarnings.push(`${itemName} will expire in ${diffDays} day(s).`);
+  }
+}
+});
 
-    if (lowStockItems.length > 0) {
-      alert("⚠️ The following items are LOW in stock:\n\n" + lowStockItems.join("\n"));
-    }
+// SHOW ALERTS
+if (noStockItems.length > 0) {
+  alert("⚠️ The following items have NO STOCK:\n\n" + noStockItems.join("\n"));
+}
 
-    if (expiryWarnings.length > 0) {
-      alert("⚠️ EXPIRY WARNING ⚠️\n\n" + expiryWarnings.join("\n"));
-    }
+if (lowStockItems.length > 0) {
+  alert("⚠️ The following items are LOW in stock:\n\n" + lowStockItems.join("\n"));
+}
+
+if (expiredItems.length > 0) {
+  alert("⚠️ EXPIRED ITEMS ⚠️\n\n" + expiredItems.join("\n"));
+}
+
+if (expiryWarnings.length > 0) {
+  alert("⚠️ EXPIRY WARNING ⚠️\n\n" + expiryWarnings.join("\n"));
+}
 
   }, { onlyOnce: true });
 
 });
+

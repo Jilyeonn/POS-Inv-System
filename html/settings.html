@@ -1,12 +1,14 @@
 <html>
     <head>
         <title> POS & Inventory System</title>
-        <link rel="stylesheet" type="text/css" href="../css/pos.css">
+        <link rel="stylesheet" type="text/css" href="../css/settings.css">
         <link rel="stylesheet" type="text/css" href="../css/navbar.css">
         <link rel="icon" type="img/png" href="../img/logo.png" src="../img/logo.png">
-        <script src=""></script>
-        <script type="module" src="../js/pos.js"></script>
-    </head>
+         <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        <script type="module" src="../js/settings.js"></script>
+      </head>
+
     <body>
         <!--Start of Navigation Bar-->
     <aside class="sidebar">
@@ -37,99 +39,45 @@
     </div>
   </aside>
         <!-- End of Navigation Bar -->
-        <!-- Body of Dashboard (Charts of Sales & Inventory)-->
-
-        <div class="container">
-        <div class="container-1">
-          <h2 style="color:white;">Products</h2>
-          <div class="search-bar">
-    <input type="text" id="searchBar" placeholder="Search item name..."style="width: 30%; padding: 8px; margin-bottom: 10px;">
-
-    <select id="categoryFilter" style="padding: 8px; margin-left: 10px; width: 30%;">
-        <option value="All">All Categories</option>
-        <option value="yoghurt">Yoghurt</option>
-        <option value="milk">Milk</option>
-        <option value="snacks">Snacks</option>
-        <option value="bread">Bread</option>
-        <!-- You can add more categories here -->
-    </select>
-</div>
-          <div class="products">
-            
-          <div class="products-section">
-  
-  <div id="product-list" class="product-grid"></div>
-</div>
-</div>
-</div>
-<!-- cart -->
-
-<div class="container-2">
-<div class="checkout"> <!-- acts as container for the checkout-->
-<div id="cart"></div>
-</div>
-<!-- separation-->
-
-  <div class="total">
-<div class="checkout1">
- <label for="discountType">Discount Type:</label>
-  <select id="discountType">
-    <option value="None">None</option>
-    <option value="Senior">Senior Citizen (20%)</option>
-    <option value="PWD">PWD (20%)</option>
-  </select>
-</div>
-
-  <div class="discount-id-container">
-    <label for="discountId">Discount ID No.:</label>
-    <input type="text" id="discountId">
-</div>
-
-<p>Total: ₱<span id="total">0.00</span></p>
-    <div class="checkout3">
-      <label style="font-size: 14px; margin-top: 0px;">Cash(₱):</label>
-      <input id="cashInput" type="number" min="0" step="0.01" placeholder="Enter cash amount">
+        <!-- Body of Dashboard (Charts and Graphs of Sales & Inventory)-->
+         
+  <div class="container">
+    <!-- USER INFO -->
+    <div id="userSection" class="card hidden">
+      <h2>Logged in as: <span id="userEmail"></span></h2>
     </div>
+
+    <input type="text" id="emailSearchInput" placeholder="Search by User Email..." 
+       style="margin-top: 15px;margin-bottom: 15px; padding: 8px; width: 300px; border-radius: 4px; border: 1px solid #ccc;">
     
-    <div class="amount">
-      Change: ₱<span id="changeAmount">0.00</span>
+    <!-- LOGS TABLE -->
+    <div class="card">
+      <h2>Activity Log</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User ID</th>
+            <th>Action</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="logsTableBody">
+          <tr>
+            <td colspan="4" style="text-align:center;">Loading logs...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-      <button id="checkoutBtn">Checkout</button>
-  </div>
   </div>
 
-
-  <!-- E-Receipt Popup -->
-   
-<div id="receiptPopup" class="receipt-overlay">
-  <div id="receiptPrintArea">
-  <div style="background:white;padding:20px;border-radius:10px;width:360px;text-align:center;">
-    <h3>Receipt</h3>
-    <h3>VHT Naturals</h3>
-    <p><strong>Order No:</strong> <span id="receiptNumber"></span></p>
-    <table class="receipttable">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Price</th>
-        </tr>
-      </thead>
-      <tbody id="receiptItems"></tbody>
-    </table>
-    <p><strong>Total:</strong> ₱<span id="receiptTotal"></span></p>
-    <button onclick="printReceipt()" class="print-btn">Print Receipt</button>
-  </div>
-</div>
-</div>
-</div>
+  
 </body>
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-<script>
-  lucide.createIcons();
+        
+        <!--SCRIPT NA ITO -->
+ <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
 const collapseBtn = document.getElementById("collapseBtn");
   const sidebar = document.querySelector(".sidebar");
   const main = document.querySelector(".main");
@@ -162,9 +110,7 @@ const collapseBtn = document.getElementById("collapseBtn");
     navLinks.classList.remove("active");
   }
 
-  function printReceipt() {
-  window.print();
-}
+  
  window.addEventListener("load", () => {
   const hash = window.location.hash.substring(1);
 
@@ -176,6 +122,8 @@ const collapseBtn = document.getElementById("collapseBtn");
     // default fallback
     showPage("sales");
   }
+
+  
 });
     
   </script>

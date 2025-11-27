@@ -13,7 +13,7 @@ body{
 position: fixed;
 top: 0;
 left: 0; right: 0;
-height: 70px;
+height: 50px;
 padding: 0 20px;
 z-index: 1000;
 }
@@ -27,7 +27,8 @@ z-index: 1000;
 #navtitle{
     margin-left: 15px;
     margin-top: 16px;
-    font-size: 30px;
+    font-size: 20px;
+    font-weight: 600;
 }
 
 #navtitle2{
@@ -36,10 +37,10 @@ z-index: 1000;
 }
 
 #nav-logo{
-    margin-top: 5px;
+    margin-top: 10px;
     margin-left: 25px;
-    width: 61px;
-    height: 57px;
+    width: 41px;
+    height: 37px;
     float: left;
     box-shadow: 3px 4px 12px rgba(0,0,0,0.2);
     border-radius: 30px;
@@ -221,49 +222,70 @@ img{
       top: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
+      background-color: rgba(0, 0, 0, 0.65);
       justify-content: center;
       align-items: center;
     }
 
     .reset-content {
       background-color: #fff;
-      padding-left: 25px;
-      padding-right: 25px;
-      padding-bottom: 25px;
-      padding-top: 10px;
-      border-radius: 10px;
-      width: 275px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      font-style: bold;
+      /* Adjusted padding: 30px top/bottom, 25px left/right */
+      padding: 20px 25px 25px;
+      border-radius: 12px; /* Slightly more rounded corners */
+      width: 300px; /* Slightly wider for better balance */
+      max-width: 90%; /* Ensure it works well on small screens */
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Softer, more prominent shadow */
+      text-align: center; /* Center all contents */
     }
-
-    .reset-content h3 {
-      text-align: center;
-      margin-bottom: 0;
-      font-weight: 100;
+.reset-content p {
+        font-size: 22px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 20px;
+        line-height: 1.4;
+    }
+    
+    /* Assuming "Enter your email..." is now inside a <p> tag */
+    .reset-content p:first-of-type {
+        margin-top: 0; 
     }
 
     .reset-content input {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      padding: 12px 15px; /* More padding inside */
+      margin-bottom: 25px; /* More space before the button */
+      border-radius: 8px; /* Slightly more rounded input */
+      border: 1px solid #ddd; /* Lighter border color */
+      box-sizing: border-box; /* Ensures padding doesn't widen the element */
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    
+    .reset-content input:focus {
+        border-color: #4CAF50; /* Highlight border on focus */
+        outline: none;
     }
 
+
+    /* ------------------------ BUTTON ------------------------ */
     .reset-content button {
       width: 100%;
-      padding: 10px;
-      background-color: #4CAF50;
-      color: black;
+      padding: 12px; /* Slightly larger vertical padding */
+      background-color: #4CAF50; /* Primary green color */
+      color: #fff; /* White text for better contrast */
+      font-weight: 600; /* Bolder text */
+      font-size: 16px;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px; /* Matching the input radius */
       cursor: pointer;
+      transition: background-color 0.3s, transform 0.1s;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Slight shadow for depth */
     }
 
     .reset-content button:hover {
       background-color: #45a049;
+      transform: translateY(-1px); /* Slight lift on hover */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .close-reset {

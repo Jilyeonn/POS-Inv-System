@@ -3,6 +3,11 @@
       background-color: #f4f6f9;
       margin: 0;
     }
+
+.container-1{
+  padding-right: 20px;
+}
+
 .card {
   background: var(--card);
   padding: 14px;
@@ -10,6 +15,11 @@
   box-shadow: 0 6px 18px rgba(2,6,23,0.45);
   border: 1px solid rgba(255,255,255,0.02);
   }
+
+.cards{
+  padding-left: 20px;
+}
+
 .card h3 {
       font-size:0.9rem;
       color: #555;

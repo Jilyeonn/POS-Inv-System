@@ -8,14 +8,13 @@
         <link href="https://fonts.googleapis.com/css2?family=Knewave&family=Sail&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
         <link rel="icon" type="img/png" href="img/logo.png" src="img/logo.png">
-        <script type="module" src="js/login.js" defer></script>
+        
     </head>
     <body>
         <!--Start of Navigation Bar-->
         <div class = "navbar">
         <img src="img/logo.png" id="nav-logo">
-        <p id="navtitle">VHT</p>
-        <p id="navtitle2">Naturals</p>
+        <p id="navtitle">VHT Naturals</p>
         </div>
         <!-- End of Navigation Bar -->
         <!-- Body of Home Page -->
@@ -27,7 +26,7 @@
         <div class="container" id="loginPopup">
             <div class="loginbody">
               <img src="img/wctext.png"> 
-            <form action="html/dashboard.html">
+            <form id="loginForm">
                 <div>
                 <label for="Email">Email</label>
                 <input type="text" id="email" placeholder="Enter your Email"/>
@@ -58,8 +57,9 @@
   </div>
   </body>
 
+  <script type="module" src="js/login.js"></script>
     <script>
-      const togglePassword = document.getElementById('togglePassword');
+    const togglePassword = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
     const resetPopup = document.getElementById('resetPopup');

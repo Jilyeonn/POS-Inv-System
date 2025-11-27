@@ -1,13 +1,19 @@
  body {
       font-family: "Poppins", sans-serif;
-      background-color: #f4f6f9;
+      background-color: #2d7044;
       margin: 0;
     }
 
 .container-1{
   width: 85%;
-  margin-left: 200px;
+  margin-left: 190px;
   transition: margin-left 0.3s ease;
+}
+
+.container-2{
+  width: 100%;
+  background-color: #2d7044;
+  padding: 0;
 }
  /* Page content for the two buttons*/
     .page {
@@ -18,8 +24,8 @@
       display: block;
     }
 
-    .card {
-      background: white;
+   .container-1 .card {
+      background-color: white;
       padding: 20px;
       margin: 10px 0;
       border-radius: 8px;

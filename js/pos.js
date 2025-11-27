@@ -67,7 +67,7 @@ function loadCategories() {
     const categories = new Set();
     snapshot.forEach(child => {
       const p = child.val();
-      if (p.category) categories.add(p.category);
+      if (p.isArchived !== true && p.category) categories.add(p.category);
     });
 
     categoryFilter.innerHTML = `<option value="All">All Categories</option>`;
@@ -116,6 +116,8 @@ function loadProducts() {
         const qtyAvailable = Number(product.quantity ?? 0);
         const name = (product.name ?? product.item ?? "Unnamed").toLowerCase();
         const category = product.category ?? "Uncategorized";
+
+        if (product.isArchived === true) return;
 
         // 🔹 Category filter
         if (selectedCategory !== "All" && category !== selectedCategory) return;
@@ -195,6 +197,7 @@ async function addToCartById(id) {
     }
     const price = parseFloat(product.price ?? product.unitPrice ?? 0);
     const available = Number(product.quantity ?? 0);
+    const category = product.category || 'Uncategorized';
 
     const currentQtyInCart = cart[id] ? cart[id].qty : 0;
     if (available <= currentQtyInCart) {
@@ -203,7 +206,7 @@ async function addToCartById(id) {
     }
 
     if (!cart[id]) {
-      cart[id] = { id, name: product.name ?? product.item ?? "Unnamed", price, qty: 0, image: product.image || "" };
+      cart[id] = { id, name: product.name ?? product.item ?? "Unnamed", price, qty: 0, image: product.image || "", category: category };
     }
     cart[id].qty++;
     renderCart();
@@ -218,7 +221,7 @@ function renderCart() {
   let total = 0;
   const ids = Object.keys(cart);
   if (ids.length === 0) {
-    cartList.innerHTML = "<p style='text-align:center; color:#666;'>Cart is empty</p>";
+    cartList.innerHTML = "<p style='text-align:center; color:#FFFFFF;'>Cart is empty</p>";
     totalEl.textContent = formatCurrency(0);
     return;
   }
@@ -231,25 +234,38 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;">
-        <div>
-          <div style="font-weight:450;">${escapeHtml(it.name)}</div>
-          <div style="width:50px;height:50px;">
-          ${
-            it.image
-              ? `<img src="${it.image}" alt="${escapeHtml(it.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">`
-              : `<div style="width:100%;height:100%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;border-radius:4px;">No Image</div>`
-          }
-        </div>
-          <div style="font-size:13px;color:#666;">₱${formatCurrency(it.price)} x ${it.qty} = ₱${formatCurrency(lineTotal)}</div>
-        </div>
+      <div style="display:flex; gap:10px; align-items:center; padding-bottom: 5px;">
+  <div>
+    <div style="font-weight:450; color:white;">${escapeHtml(it.name)}</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="width:50px; height:50px; flex-shrink:0;">
+        ${
+          it.image
+            ? `<img src="${it.image}" alt="${escapeHtml(it.name)}"
+                style="width:100%; height:100%; object-fit:cover; border-radius:4px;">`
+            : `<div style="width:100%; height:100%; background:#eee; display:flex; align-items:center; justify-content:center; font-size:10px; color:gray; border-radius:4px;">No Image</div>`
+        }
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <button class="qtyBtn" data-id="${id}" data-delta="-1">−</button>
+
+      <div style="display:flex; align-items:center; gap:0px; color:#FFFFFF; font-size:13px; padding-bottom: 5px;">
+        <span>₱${formatCurrency(it.price)}</span>
+        <span>x</span>
         <span>${it.qty}</span>
-        <button class="qtyBtn" data-id="${id}" data-delta="1">+</button>
-        <button class="removeBtn" data-id="${id}" style="margin-left:8px;background:#e74c3c;color:#fff;border:none;padding:6px;border-radius:6px;cursor:pointer;">Remove</button>
+        <span>=</span>
+        <span>₱${formatCurrency(lineTotal)}</span>
       </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex; gap:6px; align-items:center;">
+  <button class="qtyBtn" data-id="${id}" data-delta="-1">−</button>
+  <span style="color:white;">${it.qty}</span>
+  <button class="qtyBtn" data-id="${id}" data-delta="1">+</button>
+  <button class="removeBtn" data-id="${id}" style="margin-left:8px; background:#e74c3c; color:#FFFFFF; border:none; padding:6px; border-radius:6px; cursor:pointer;">
+  Remove
+  </button>
+</div>
     `;
     cartList.appendChild(div);
   });
@@ -278,16 +294,23 @@ function getCartTotal() {
 }
 
 function validateDiscountId(type, id) {
-  const digitsOnly = id.replace(/\D/g, "");
-  let valid = false;
-  let requiredLength = 0;
 
-  if (type === "Senior") {
-    requiredLength = 8;
-    valid = digitsOnly.length === requiredLength;
-  } else if (type === "PWD") {
-    requiredLength = 7;
-    valid = digitsOnly.length === requiredLength;
+  const alphanumeric = id.trim();
+  
+  let valid = false;
+  let requiredLength = 0;
+  let formatMessage = ""; 
+
+  if (type === "Senior") {
+    requiredLength = 5;
+    valid = alphanumeric.length >= requiredLength;
+    formatMessage = `a minimum of ${requiredLength} characters)`;
+  } else if (type === "PWD") {
+    requiredLength = 12;
+    valid = alphanumeric.length >= requiredLength;
+    formatMessage = `a minimum of ${requiredLength} characters`;
+  } else {
+    valid = true; 
   }
 
   let container = document.querySelector(".discount-id-container");
@@ -296,14 +319,14 @@ let errorEl = document.getElementById("discountError");
 if (!errorEl) {
   errorEl = document.createElement("div");
   errorEl.id = "discountError";
-  errorEl.style.color = "red";
+  errorEl.style.color = "white";
   errorEl.style.fontSize = "13px";
 
   container.insertAdjacentElement("afterend", errorEl);
 }
 
 if (!valid && (type === "Senior" || type === "PWD")) {
-  errorEl.textContent = `❌ ${type} ID must be exactly ${requiredLength} digits.`;
+  errorEl.textContent = `❌ ${type} ID must have a ${formatMessage}. Current length: ${alphanumeric.length}`;
 } else {
   errorEl.textContent = "";
 }
@@ -457,6 +480,7 @@ checkoutBtn.addEventListener("click", async () => {
         name: it.name,
         price: it.price,
         quantity: it.qty,
+        category: it.category,
       })),
     };
 
@@ -514,11 +538,13 @@ function showReceipt(order) {
 
   receiptTotalEl.textContent = formatCurrency(order.total);
   receiptPopup.style.display = "flex";
-}
 
-window.closeReceipt = function () {
-  if (receiptPopup) receiptPopup.style.display = "none";
-};
+   receiptPopup.addEventListener("click", (e) => {
+  if (e.target === receiptPopup) {
+    receiptPopup.style.display = "none";
+  }
+});
+}
 
 // ========== Live Sales ==========
 if (salesList) {
